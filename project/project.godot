@@ -10,6 +10,12 @@ config_version=5
 
 [application]
 
-config/name="godot cpp template"
-config/features=PackedStringArray("4.1", "Forward Plus")
+config/name="DiggingDwarfsCpp"
+config/version="0.1"
+run/main_scene="uid://dh0oj81pufivs"
+config/features=PackedStringArray("4.4", "Forward Plus")
 config/icon="res://icon.svg"
+
+[dotnet]
+
+project/assembly_name="godot cpp template"

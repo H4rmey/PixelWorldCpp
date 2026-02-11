@@ -58,7 +58,14 @@ library = env.SharedLibrary(
     source=sources,
 )
 
+# Copy the DLL
 copy = env.Install("{}/bin/{}/".format(projectdir, env["platform"]), library)
+
+# Copy the PDB (convert File to string)
+dll_path = str(library[0])
+pdb_file = dll_path.replace(".dll", ".pdb")
+env.Install("{}/bin/{}/".format(projectdir, env["platform"]), pdb_file)
 
 default_args = [library, copy]
 Default(*default_args)
+
