@@ -21,7 +21,7 @@ Color element_to_color(ElementType type) {
 }
 
 int main() {
-    const int cellSize = 4;
+    const int cellSize = 5;
 
     const int total_width  = CHUNK_COUNT_X * CHUNK_SIZE_X;
     const int total_height = CHUNK_COUNT_Y * CHUNK_SIZE_Y;
@@ -46,7 +46,7 @@ int main() {
     while (!WindowShouldClose()) {
 
 		// --- Input: Adjust brush size ---
-		if (IsKeyPressed(KEY_KP_ADD) || IsKeyPressed(KEY_EQUAL)) brush_size = std::min(9, brush_size + 1);
+		if (IsKeyPressed(KEY_KP_ADD) || IsKeyPressed(KEY_EQUAL)) brush_size = std::min(90, brush_size + 1);
 
 		// Check multiple minus variants for different layouts
 		if (IsKeyPressed(KEY_KP_SUBTRACT) || IsKeyPressed(KEY_MINUS) || IsKeyPressed(KEY_MINUS))
