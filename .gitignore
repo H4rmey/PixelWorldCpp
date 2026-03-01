@@ -1,6 +1,8 @@
 # Godot auto generated files
 *.gen.*
 .godot/
+godot*
+Godot*
 
 # Ignore library files but not the gdextension file
 project/bin/*
@@ -45,17 +47,22 @@ compile_commands.json
 *.includes
 *.idb
 *.exp
+*.exe
 
 # Other stuff
 *.log
 
 # VSCode
 .vscode/*
+.vs/*
 !.vscode/extensions.json
 .DS_Store
 
 # Jetbrains
 .idea/
+
+# Other hidden
+.cache/
 
 # Cmake
 cmake-build*
