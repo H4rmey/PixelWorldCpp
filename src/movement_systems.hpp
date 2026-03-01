@@ -1,9 +1,9 @@
 #pragma once
 
-#include "IMovement.hpp"
+#include "helpers/move_decision.h"
+#include "movement/IMovement.h"
 #include "chunk.hpp"
-
-namespace godot {
+#include "helpers/element_type.h"
 
 // ---------------------------------------------------------
 // SandMovement — does not move
@@ -11,30 +11,30 @@ namespace godot {
 class SandMovement : public IMovement {
 public:
 	MoveDecision process(int x, int y, const Chunk &chunk) const override {
-		const Element &self = chunk.get_element_global(x, y);
+		const Element &self = chunk.get_element_local(x, y);
 
 		if (self.type != ElementType::Sand)
-			return { x, y, x, y, MoveType::Stay };
+			return MoveDecision::Stay(x,y);
 
 		// Try to fall straight down
-		const Element &below = chunk.get_element_global(x, y + 1);
+		const Element &below = chunk.get_element_local(x, y + 1);
 		if (below.is_empty()) {
-			return { x, y, x, y + 1, MoveType::Swap };
+			return { x, y, x, y + 1, 0, 0, MoveType::Swap };
 		}
 
 		// Try down-left
-		const Element &down_left = chunk.get_element_global(x - 1, y + 1);
+		const Element &down_left = chunk.get_element_local(x - 1, y + 1);
 		if (down_left.is_empty()) {
-			return { x, y, x - 1, y + 1, MoveType::Swap };
+			return { x, y, x - 1, y + 1, 0, 0, MoveType::Swap };
 		}
 
 		// Try down-right
-		const Element &down_right = chunk.get_element_global(x + 1, y + 1);
+		const Element &down_right = chunk.get_element_local(x + 1, y + 1);
 		if (down_right.is_empty()) {
-			return { x, y, x + 1, y + 1, MoveType::Swap };
+			return { x, y, x + 1, y + 1, 0, 0, MoveType::Swap };
 		}
 
-		return { x, y, x, y, MoveType::Stay };
+		return MoveDecision::Stay(x, y);
 	}
 };
 
@@ -44,7 +44,7 @@ public:
 class SolidMovement : public IMovement {
 public:
 	MoveDecision process(int x, int y, const Chunk &chunk) const override {
-		return { x, y, x, y, MoveType::Stay };
+		return MoveDecision::Stay(x, y);
 	}
 };
 
@@ -54,35 +54,35 @@ public:
 class GasMovement : public IMovement {
 public:
 	MoveDecision process(int x, int y, const Chunk &chunk) const override {
-		const Element &self = chunk.get_element_global(x, y);
+		const Element &self = chunk.get_element_local(x, y);
 		if (self.is_empty())
-			return { x, y, x, y, MoveType::Stay };
+			return MoveDecision::Stay(x, y);
 
 		// Try up
-		const Element &up = chunk.get_element_global(x, y - 1);
+		const Element &up = chunk.get_element_local(x, y - 1);
 		if (up.is_empty())
-			return { x, y, x, y - 1, MoveType::Move };
+			return { x, y, x, y - 1, 0, 0, MoveType::Swap };
 
 		// Try up-left
-		const Element &up_left = chunk.get_element_global(x - 1, y - 1);
+		const Element &up_left = chunk.get_element_local(x - 1, y - 1);
 		if (up_left.is_empty())
-			return { x, y, x - 1, y - 1, MoveType::Move };
+			return { x, y, x - 1, y - 1, 0, 0, MoveType::Swap };
 
 		// Try up-right
-		const Element &up_right = chunk.get_element_global(x + 1, y - 1);
+		const Element &up_right = chunk.get_element_local(x + 1, y - 1);
 		if (up_right.is_empty())
-			return { x, y, x + 1, y - 1, MoveType::Move };
+			return { x, y, x + 1, y - 1, 0, 0, MoveType::Swap };
 
 		// Try sideways
-		const Element &left = chunk.get_element_global(x - 1, y);
+		const Element &left = chunk.get_element_local(x - 1, y);
 		if (left.is_empty())
-			return { x, y, x - 1, y, MoveType::Move };
+			return { x, y, x - 1, y, 0, 0, MoveType::Swap };
 
-		const Element &right = chunk.get_element_global(x + 1, y);
+		const Element &right = chunk.get_element_local(x + 1, y);
 		if (right.is_empty())
-			return { x, y, x + 1, y, MoveType::Move };
+			return { x, y, x + 1, y, 0, 0, MoveType::Swap };
 
-		return { x, y, x, y, MoveType::Stay };
+		return MoveDecision::Stay(x, y);
 	}
 };
 
@@ -92,36 +92,36 @@ public:
 class LiquidMovement : public IMovement {
 public:
 	MoveDecision process(int x, int y, const Chunk &chunk) const override {
-		const Element &self = chunk.get_element_global(x, y);
+		const Element &self = chunk.get_element_local(x, y);
 		if (self.is_empty())
-			return { x, y, x, y, MoveType::Stay };
+			return MoveDecision::Stay(x, y);
 
 		// Down
-		const Element &down = chunk.get_element_global(x, y + 1);
+		const Element &down = chunk.get_element_local(x, y + 1);
 		if (down.is_empty())
-			return { x, y, x, y + 1, MoveType::Move };
+			return { x, y, x, y + 1, 0, 0, MoveType::Swap };
 
 		// Down-left
-		const Element &down_left = chunk.get_element_global(x - 1, y + 1);
+		const Element &down_left = chunk.get_element_local(x - 1, y + 1);
 		if (down_left.is_empty())
-			return { x, y, x - 1, y + 1, MoveType::Move };
+			return { x, y, x - 1, y + 1, 0, 0, MoveType::Swap };
 
 		// Down-right
-		const Element &down_right = chunk.get_element_global(x + 1, y + 1);
+		const Element &down_right = chunk.get_element_local(x + 1, y + 1);
 		if (down_right.is_empty())
-			return { x, y, x + 1, y + 1, MoveType::Move };
+			return { x, y, x + 1, y + 1, 0, 0, MoveType::Swap };
 
 		// Spread left
-		const Element &left = chunk.get_element_global(x - 1, y);
+		const Element &left = chunk.get_element_local(x - 1, y);
 		if (left.is_empty())
-			return { x, y, x - 1, y, MoveType::Move };
+			return { x, y, x - 1, y, 0, 0, MoveType::Swap };
 
 		// Spread right
-		const Element &right = chunk.get_element_global(x + 1, y);
+		const Element &right = chunk.get_element_local(x + 1, y);
 		if (right.is_empty())
-			return { x, y, x + 1, y, MoveType::Move };
+			return { x, y, x + 1, y, 0, 0, MoveType::Swap };
 
-		return { x, y, x, y, MoveType::Stay };
+		return MoveDecision::Stay(x, y);
 	}
 };
 
@@ -138,8 +138,6 @@ class WaterMovement : public LiquidMovement {
 class PowderMovement : public IMovement {
 public:
 	MoveDecision process(int x, int y, const Chunk &chunk) const override {
-		return { x, y, x, y, MoveType::Stay };
+		return MoveDecision::Stay(x, y);
 	}
 };
-
-} // namespace godot

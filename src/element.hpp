@@ -1,31 +1,25 @@
 #pragma once
 
-#include "element_type.hpp"
-
-namespace godot {
+#include "helpers/element_type.h"
 
 class IMovement;
 class Chunk;
 
 class Element {
 public:
-	ElementType type = ElementType::Empty;
+    ElementType type = ElementType::Empty;
+    const IMovement* movement = nullptr;
 
-	// Component pointer (non-owning)
-	const IMovement* movement = nullptr;
+    Element() = default;
 
-	Element() = default;
+    Element(ElementType t, const IMovement* move)
+        : type(t), movement(move) {}
 
-	Element(ElementType t, const IMovement *move) :
-			type(t), movement(move) {}
+    inline bool is_empty() const {
+        return type == ElementType::Empty;
+    }
 
-	inline bool is_empty() const {
-		return type == ElementType::Empty;
-	}
-
-	static const Element &Empty() {
-		static Element empty(ElementType::Empty, nullptr);
-		return empty;
-	}
+    // Returns a reference to a static empty element
+    static const Element& Empty();
 };
-} // godot namespace
+
