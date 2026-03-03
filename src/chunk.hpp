@@ -44,6 +44,8 @@ public:
 	static constexpr int m_width = CHUNK_SIZE_X;
 	static constexpr int m_height = CHUNK_SIZE_Y;
 
+	uint32_t active_index = UINT32_MAX;
+
 private:
 	int m_world_pos_x;
 	int m_world_pos_y;
@@ -80,7 +82,8 @@ public:
 	inline static int index(int x, int y) { return m_width * y + x; }
 	inline Element &at(int x, int y) { return m_elements[index(x, y)]; }
 	inline const Element &at(int x, int y) const { return m_elements[index(x, y)]; }
-	inline void set_element_local(int x, int y, const Element &e) { m_elements[index(x, y)] = e; }
+
+	void set_element_local(int x, int y, const Element &e);
 
 	inline void mark_dirty_external(int x, int y) {
 		if (!m_dirty_rect.is_valid()) {
@@ -92,9 +95,27 @@ public:
 			m_dirty_rect.max_y = std::max(m_dirty_rect.max_y, y);
 		}
 	}
+	inline void clear_dirty()
+	{
+		m_dirty_rect.min_x = 0;
+		m_dirty_rect.min_y = 0;
+		m_dirty_rect.max_x = -1;
+		m_dirty_rect.max_y = -1;
+	}
+
+	inline bool is_dirty() const
+	{
+		return m_dirty_rect.max_x >= m_dirty_rect.min_x &&
+			m_dirty_rect.max_y >= m_dirty_rect.min_y;
+	}
+
+	inline const Rect& get_dirty_rect_local() const
+	{
+		return m_dirty_rect;
+	}
 
 	const Element &get_element_global(int x, int y) const;
- 	const Element &get_element_local(int x, int y) const;
+	const Element &get_element_local(int x, int y) const;
 	std::vector<MoveDecision> &process_movement();
 	std::vector<MoveDecision> apply_decisions(const std::vector<MoveDecision>& decisions);
 };

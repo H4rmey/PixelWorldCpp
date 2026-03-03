@@ -5,6 +5,7 @@
 #include "helpers/element_type.h"
 #include "movement_systems.hpp"
 #include <algorithm>
+#include <cstdint>
 #include <iostream>
 
 Color element_to_color(ElementType type) {
@@ -104,10 +105,11 @@ int main() {
             {
                 int cx, cy, lx, ly;
                 if (world.get_chunk_for_global_cell(gx, gy, cx, cy, lx, ly))
-                {
-                    ElementType type = world.chunk_at(cx, cy).at(lx, ly).type;
-                    DrawRectangle(gx * cellSize, gy * cellSize, cellSize, cellSize, element_to_color(type));
-                }
+				{
+					Chunk chunk = world.chunk_at(cx, cy);
+					ElementType type = chunk.at(lx, ly).type;
+					DrawRectangle(gx * cellSize, gy * cellSize, cellSize, cellSize, element_to_color(type));
+				}
             }
         }
 
@@ -120,7 +122,16 @@ int main() {
                 int posy = y * CHUNK_SIZE_Y * cellSize + 1;
                 int width = CHUNK_SIZE_X * cellSize - 1;
                 int height = CHUNK_SIZE_Y * cellSize - 1;
-                DrawRectangleLines(posx, posy, width, height, GREEN);
+
+				Chunk chunk = world.chunk_at(x, y);
+				if (chunk.active_index == UINT32_MAX)
+				{
+                	DrawRectangleLines(posx, posy, width, height, RED);
+				}
+				else
+				{
+                	DrawRectangleLines(posx, posy, width, height, GREEN);
+				}
             }
         }
 

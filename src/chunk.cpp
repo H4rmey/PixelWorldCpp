@@ -9,6 +9,10 @@ void Chunk::fill_with_empty() {
     }
 }
 
+void Chunk::set_element_local(int x, int y, const Element &e) {
+	m_elements[index(x, y)] = e;
+	m_world->activate_chunk(*this);
+}
 
 const Element& Chunk::get_element_local(int x, int y) const
 {

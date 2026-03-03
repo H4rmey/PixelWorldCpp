@@ -1,6 +1,7 @@
 #pragma once
 
 #include <array>
+#include <cstdint>
 
 #include "helpers/constants.h"
 #include "element.hpp"
@@ -12,12 +13,17 @@ private:
     static constexpr std::size_t m_size = CHUNK_COUNT;
 
     std::array<Chunk, CHUNK_COUNT> m_chunks;
+	std::vector<Chunk*> m_active_chunks;
+	std::vector<std::vector<MoveDecision>*> m_decision_ptrs;
+	std::vector<MoveDecision> m_cross;
+	std::vector<Chunk*> m_chunks_to_deactivate;
 
 	Chunk m_bedrock_chunk;
 
 public:
 
 	WorldManager() {
+
 		//initialize the bedrock chunk
 		m_bedrock_chunk = Chunk();
 		m_bedrock_chunk.init(this, -1,-1);
@@ -57,6 +63,9 @@ public:
     Chunk &chunk_at(int cx, int cy);
     const Chunk &chunk_at(int cx, int cy) const;
 	inline static int index(int x, int y) { return CHUNK_COUNT_X * y + x; }
+
+	void activate_chunk(Chunk& c);
+	void deactivate_chunk(Chunk& c);
 
 	Element& get_element_global(int x, int y);
 	const Element& get_element_global(int x, int y) const;
