@@ -22,7 +22,7 @@ Color element_to_color(ElementType type) {
 }
 
 int main() {
-    const int cellSize = 5;
+    const int cellSize = CELL_SIZE;
 
     const int total_width  = CHUNK_COUNT_X * CHUNK_SIZE_X;
     const int total_height = CHUNK_COUNT_Y * CHUNK_SIZE_Y;
@@ -40,7 +40,7 @@ int main() {
 	EmptyMovement empty_movement;
 	movement_ptr = &sand_movement;
 
-    int brush_size = 4; // initial brush radius
+    int brush_size = BRUSH_SIZE; // initial brush radius
     ElementType brush_type = ElementType::Sand;
 
 
@@ -51,7 +51,7 @@ int main() {
 
 		// Check multiple minus variants for different layouts
 		if (IsKeyPressed(KEY_KP_SUBTRACT) || IsKeyPressed(KEY_MINUS) || IsKeyPressed(KEY_MINUS))
-			brush_size = std::max(1, brush_size - 1);
+			brush_size = std::max(0, brush_size - 1);
 
         // --- Input: Change element type with number keys ---
 		if (IsKeyPressed(KEY_ONE)) { brush_type = ElementType::Sand; movement_ptr = &sand_movement; }
@@ -96,7 +96,7 @@ int main() {
         world.step();
 
         BeginDrawing();
-        ClearBackground(BLACK);
+        ClearBackground(WHITE);
 
         // --- Draw all elements ---
         for (int gy = 0; gy < total_height; ++gy)
@@ -137,6 +137,7 @@ int main() {
 
         // --- Draw brush preview ---
         DrawCircleLines(static_cast<int>(mouse_pos.x), static_cast<int>(mouse_pos.y), brush_size * cellSize, RED);
+		DrawFPS(30, 30);
 
         EndDrawing();
     }

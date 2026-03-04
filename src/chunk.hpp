@@ -46,9 +46,11 @@ public:
 
 	uint32_t active_index = UINT32_MAX;
 
+	uint8_t border_mask = 0;
+
 private:
-	int m_world_pos_x;
-	int m_world_pos_y;
+	int m_world_pos_x = -2;
+	int m_world_pos_y = -2;
 
 	std::array<Element, CHUNK_SIZE_X * CHUNK_SIZE_Y> m_elements{};
 	std::array<Element, CHUNK_SIZE_X * CHUNK_SIZE_Y> m_elements_old{};
