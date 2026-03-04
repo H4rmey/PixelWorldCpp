@@ -87,7 +87,7 @@ public:
 
 	void set_element_local(int x, int y, const Element &e);
 
-	inline void mark_dirty_external(int x, int y) {
+	inline void mark_dirty(int x, int y) {
 		if (!m_dirty_rect.is_valid()) {
 			m_dirty_rect = { x, y, x, y };
 		} else {

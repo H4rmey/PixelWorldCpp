@@ -135,6 +135,25 @@ int main() {
             }
         }
 
+        // --- Draw chunk diryt rect outlines ---
+        for (int y = 0; y < CHUNK_COUNT_Y; y++)
+        {
+            for (int x = 0; x < CHUNK_COUNT_X; x++)
+            {
+                int posx = x * CHUNK_SIZE_X * cellSize + 1;
+                int posy = y * CHUNK_SIZE_Y * cellSize + 1;
+
+				Chunk chunk = world.chunk_at(x, y);
+
+				Rect r = chunk.get_dirty_rect();
+
+                int width =  (r.max_x - r.min_x) * cellSize;
+                int height =  (r.max_y - r.min_y) * cellSize;
+                DrawRectangleLines(	posx + cellSize*r.min_x,
+									posy + cellSize*r.min_y, width, height, PURPLE);
+            }
+        }
+
         // --- Draw brush preview ---
         DrawCircleLines(static_cast<int>(mouse_pos.x), static_cast<int>(mouse_pos.y), brush_size * cellSize, RED);
 		DrawFPS(30, 30);

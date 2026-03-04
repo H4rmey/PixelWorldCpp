@@ -136,6 +136,7 @@ void WorldManager::step()
 	for (Chunk* c : m_chunks_to_deactivate)
 	{
 		deactivate_chunk(*c);
+		c->clear_dirty();
 	}
 
     // PHASE 3: resolve cross-chunk movement
@@ -216,8 +217,8 @@ void WorldManager::apply_cross_chunk_swaps(const std::vector<MoveDecision>& cros
         c_old.set_element_local(old_lx, old_ly, c_new.at(new_lx, new_ly));
         c_new.set_element_local(new_lx, new_ly, tmp);
 
-        c_old.mark_dirty_external(old_lx, old_ly);
-        c_new.mark_dirty_external(new_lx, new_ly);
+        c_old.mark_dirty(old_lx, old_ly);
+        c_new.mark_dirty(new_lx, new_ly);
     }
 }
 

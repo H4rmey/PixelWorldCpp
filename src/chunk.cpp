@@ -26,6 +26,7 @@ void Chunk::set_element_local(int x, int y, const Element &e) {
 	if (cy < CHUNK_COUNT_Y - 1)
 		m_world->activate_chunk(m_world->chunk_at(cx, cy + 1));
 
+	mark_dirty(x, y);
 }
 
 const Element& Chunk::get_element_local(int x, int y) const
@@ -84,8 +85,12 @@ const Element& Chunk::get_element_global(int global_x, int global_y) const {
 std::vector<MoveDecision> &Chunk::process_movement() {
     m_decisions.clear();
 
-    for (int y = 0; y < m_height; ++y) {
-        for (int x = 0; x < m_width; ++x) {
+    //for (int y = 0; y < m_height; ++y) {
+    //    for (int x = 0; x < m_width; ++x) {
+    for (int y = m_dirty_rect.min_y-3; y < m_dirty_rect.max_y+3; ++y) {
+        for (int x = m_dirty_rect.min_x-3; x < m_dirty_rect.max_x+3; ++x) {
+			if (y < 0 || x < 0 || x >= CHUNK_SIZE_X || y >= CHUNK_SIZE_Y)
+				continue;
             MoveDecision d = m_elements[index(x, y)].movement->process(x, y, *this);
 
             if (d.move_type != MoveType::Stay) {
@@ -138,8 +143,8 @@ std::vector<MoveDecision> Chunk::apply_decisions(const std::vector<MoveDecision>
 
         std::swap(m_elements[oi], m_elements[ni]);
 
-        mark_dirty_external(d.old_x, d.old_y);
-        mark_dirty_external(d.new_x, d.new_y);
+        mark_dirty(d.old_x, d.old_y);
+        mark_dirty(d.new_x, d.new_y);
     }
 
     return out_of_bounds;
