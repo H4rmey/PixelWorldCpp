@@ -24,6 +24,7 @@ const Chunk &WorldManager::chunk_at(int x, int y) const {
     return m_chunks[y * CHUNK_COUNT_X + x];
 }
 
+
 void WorldManager::activate_chunk(Chunk& c)
 {
 	if (c.active_index != UINT32_MAX)
@@ -103,51 +104,131 @@ bool WorldManager::get_chunk_for_global_cell(
 
 void WorldManager::step()
 {
-    // Ensure pointer array is sized to active count (cheap)
-    m_decision_ptrs.clear();
-    m_decision_ptrs.reserve(m_active_chunks.size());
-	m_chunks_to_deactivate.clear();
+    // Freeze the active set for this tick.
+    // Cross-chunk swaps may activate additional chunks; those will run next tick.
+    const size_t active_count = m_active_chunks.size();
+    if (active_count == 0)
+        return;
 
-    // PHASE 1: collect decisions (no writes)
-    for (Chunk* c : m_active_chunks)
+    // Phase buffers sized to the frozen count
+    m_decision_ptrs.clear();
+    m_decision_ptrs.reserve(active_count);
+
+    m_chunks_to_deactivate.clear();
+    m_chunks_to_deactivate.reserve(active_count / 2);
+
+    static thread_local std::vector<uint8_t> had_decisions;
+    had_decisions.assign(active_count, 0);
+
+    // =========================================================
+    // PHASE 1: collect decisions (NO WRITES)
+    // =========================================================
+    for (size_t i = 0; i < active_count; ++i)
     {
-        // process_movement returns a reference to chunk-owned decision vector
-		std::vector<MoveDecision>& decisions = c->process_movement();
-		if (decisions.empty())
-		{
-			// mark the chunk for deactivation
-			m_chunks_to_deactivate.push_back(c);
-		}
+        Chunk* c = m_active_chunks[i];
+
+        std::vector<MoveDecision>& decisions = c->process_movement();
         m_decision_ptrs.push_back(&decisions);
+
+        had_decisions[i] = static_cast<uint8_t>(!decisions.empty());
+
+        // Consume the dirty rect used for scanning.
+        // Any swaps will mark dirty again for the next tick.
+        c->clear_dirty();
     }
 
-    // PHASE 2: apply decisions
+    // =========================================================
+    // PHASE 2: apply in-chunk decisions
+    // =========================================================
     m_cross.clear();
 
-    for (size_t i = 0; i < m_active_chunks.size(); ++i)
+    for (size_t i = 0; i < active_count; ++i)
     {
         Chunk* c = m_active_chunks[i];
         const std::vector<MoveDecision>& decisions = *m_decision_ptrs[i];
 
         std::vector<MoveDecision> outside = c->apply_decisions(decisions);
-        m_cross.insert(m_cross.end(), outside.begin(), outside.end());
+
+        if (!outside.empty())
+            m_cross.insert(m_cross.end(), outside.begin(), outside.end());
     }
 
-	for (Chunk* c : m_chunks_to_deactivate)
-	{
-		deactivate_chunk(*c);
-		c->clear_dirty();
-	}
-
-    // PHASE 3: resolve cross-chunk movement
+    // =========================================================
+    // PHASE 3: resolve cross-chunk swaps
+    // (may activate more chunks; that's OK now)
+    // =========================================================
     if (!m_cross.empty())
-    {
         apply_cross_chunk_swaps(m_cross);
+
+    // =========================================================
+    // PHASE 4: deactivate stable chunks from the frozen set only
+    // =========================================================
+    for (size_t i = 0; i < active_count; ++i)
+    {
+        Chunk* c = m_active_chunks[i];
+
+        // Deactivate only if:
+        //  - it produced no decisions in Phase 1
+        //  - AND nothing dirtied it during apply/cross swap
+        if (!had_decisions[i] && !c->is_dirty())
+            m_chunks_to_deactivate.push_back(c);
     }
 
-    // Optional: deactivate chunks that became stable (if you track that)
-    // e.g., if process/apply says "no moves", you can deactivate_chunk(*c)
+    for (Chunk* c : m_chunks_to_deactivate)
+    {
+        deactivate_chunk(*c);
+
+        // IMPORTANT: do NOT clear dirty here.
+        // Dirty should represent "needs work next tick".
+    }
 }
+//void WorldManager::step()
+//{
+//    // Ensure pointer array is sized to active count (cheap)
+//    m_decision_ptrs.clear();
+//    m_decision_ptrs.reserve(m_active_chunks.size());
+//	m_chunks_to_deactivate.clear();
+//
+//    // PHASE 1: collect decisions (no writes)
+//    for (Chunk* c : m_active_chunks)
+//    {
+//        // process_movement returns a reference to chunk-owned decision vector
+//		std::vector<MoveDecision>& decisions = c->process_movement();
+//		if (decisions.empty())
+//		{
+//			// mark the chunk for deactivation
+//			m_chunks_to_deactivate.push_back(c);
+//		}
+//        m_decision_ptrs.push_back(&decisions);
+//    }
+//
+//    // PHASE 2: apply decisions
+//    m_cross.clear();
+//
+//    for (size_t i = 0; i < m_active_chunks.size(); ++i)
+//    {
+//        Chunk* c = m_active_chunks[i];
+//        const std::vector<MoveDecision>& decisions = *m_decision_ptrs[i];
+//
+//        std::vector<MoveDecision> outside = c->apply_decisions(decisions);
+//        m_cross.insert(m_cross.end(), outside.begin(), outside.end());
+//    }
+//
+//	for (Chunk* c : m_chunks_to_deactivate)
+//	{
+//		deactivate_chunk(*c);
+//		c->clear_dirty();
+//	}
+//
+//    // PHASE 3: resolve cross-chunk movement
+//    if (!m_cross.empty())
+//    {
+//        apply_cross_chunk_swaps(m_cross);
+//    }
+//
+//    // Optional: deactivate chunks that became stable (if you track that)
+//    // e.g., if process/apply says "no moves", you can deactivate_chunk(*c)
+//}
 
 void WorldManager::apply_cross_chunk_swaps(const std::vector<MoveDecision>& cross)
 {

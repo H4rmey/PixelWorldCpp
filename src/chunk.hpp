@@ -84,6 +84,8 @@ public:
 	inline static int index(int x, int y) { return m_width * y + x; }
 	inline Element &at(int x, int y) { return m_elements[index(x, y)]; }
 	inline const Element &at(int x, int y) const { return m_elements[index(x, y)]; }
+	inline const int &get_world_pos_x() const { return m_world_pos_x; }
+	inline const int &get_world_pos_y() const { return m_world_pos_y; }
 
 	void set_element_local(int x, int y, const Element &e);
 

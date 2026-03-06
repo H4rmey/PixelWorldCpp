@@ -2,22 +2,29 @@
 
 #include <cstddef>
 
-#define small
+#define medium
 static constexpr int CHUNK_SIZE_X = 16;
 static constexpr int CHUNK_SIZE_Y = 16;
+
+#ifdef uuuuh
+	static constexpr int CHUNK_COUNT_X = 32;
+	static constexpr int CHUNK_COUNT_Y = 16;
+	static constexpr int CELL_SIZE = 3;
+	static constexpr int BRUSH_SIZE = 10;
+#endif
 
 #ifdef large
 	static constexpr int CHUNK_COUNT_X = 32;
 	static constexpr int CHUNK_COUNT_Y = 16;
 	static constexpr int CELL_SIZE = 3;
-	static constexpr int BRUSH_SIZE = 5;
+	static constexpr int BRUSH_SIZE = 10;
 #endif
 
 #ifdef medium
 	static constexpr int CHUNK_COUNT_X = 16;
 	static constexpr int CHUNK_COUNT_Y = 8;
 	static constexpr int CELL_SIZE = 5;
-	static constexpr int BRUSH_SIZE = 5;
+	static constexpr int BRUSH_SIZE = 8;
 #endif
 
 #ifdef small

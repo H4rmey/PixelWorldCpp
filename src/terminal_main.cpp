@@ -28,7 +28,7 @@ int main() {
     const int total_height = CHUNK_COUNT_Y * CHUNK_SIZE_Y;
 
     InitWindow(total_width * cellSize, total_height * cellSize, "World Simulation");
-    SetTargetFPS(60);
+    //SetTargetFPS(60);
 
     WorldManager world;
     IMovement *movement_ptr;
@@ -140,15 +140,16 @@ int main() {
         {
             for (int x = 0; x < CHUNK_COUNT_X; x++)
             {
-                int posx = x * CHUNK_SIZE_X * cellSize + 1;
-                int posy = y * CHUNK_SIZE_Y * cellSize + 1;
+                int posx = x * CHUNK_SIZE_X * cellSize;
+                int posy = y * CHUNK_SIZE_Y * cellSize;
 
 				Chunk chunk = world.chunk_at(x, y);
 
 				Rect r = chunk.get_dirty_rect();
 
-                int width =  (r.max_x - r.min_x) * cellSize;
-                int height =  (r.max_y - r.min_y) * cellSize;
+                int width  =  (r.max_x - r.min_x + 1) * cellSize;
+                int height =  (r.max_y - r.min_y + 1) * cellSize;
+				if (r.max_x == -1 || r.max_y == -1) {continue;}
                 DrawRectangleLines(	posx + cellSize*r.min_x,
 									posy + cellSize*r.min_y, width, height, PURPLE);
             }
