@@ -10,7 +10,7 @@
 
 Color element_to_color(ElementType type) {
     switch (type) {
-        case ElementType::Empty:  	return BLACK;
+        case ElementType::Empty:  	return GRAY;
         case ElementType::Sand:   	return YELLOW;
         case ElementType::Water:  	return BLUE;
         case ElementType::Stone:  	return GRAY;
@@ -30,7 +30,7 @@ int main() {
     InitWindow(total_width * cellSize, total_height * cellSize, "World Simulation");
     //SetTargetFPS(60);
 
-    WorldManager world;
+    static WorldManager world;
     IMovement *movement_ptr;
     SandMovement sand_movement;
 	SolidMovement solid_movement;

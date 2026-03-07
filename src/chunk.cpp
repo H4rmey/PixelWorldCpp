@@ -28,8 +28,6 @@ void Chunk::set_element_local(int x, int y, const Element &e) {
 			m_world->activate_chunk(m_world->chunk_at(cx, cy + 1));
 	}
 
-
-
 	// Left border affects left neighbor's right border
 	if (x == 0 && cx > 0)
 	{

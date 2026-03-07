@@ -9,7 +9,7 @@
 
 #include <random>
 
-bool fastRandomBool() {
+inline bool fastRandomBool() {
     static thread_local std::mt19937 rng(std::random_device{}());
     static thread_local std::bernoulli_distribution dist(0.5);
     return dist(rng);
