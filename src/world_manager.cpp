@@ -49,11 +49,11 @@ void WorldManager::deactivate_chunk(Chunk& c)
 }
 
 Element& WorldManager::get_element_global(int x, int y) {
-    // 1. Determine which chunk the global coordinate belongs to
+    // Determine which chunk the global coordinate belongs to
     int chunk_x = x / CHUNK_SIZE_X;
     int chunk_y = y / CHUNK_SIZE_Y;
 
-    // 2. Convert to local chunk coordinates
+    // Convert to local chunk coordinates
     int local_x = x % CHUNK_SIZE_X;
     int local_y = y % CHUNK_SIZE_Y;
 
@@ -61,17 +61,17 @@ Element& WorldManager::get_element_global(int x, int y) {
     if (local_x < 0) local_x += CHUNK_SIZE_X;
     if (local_y < 0) local_y += CHUNK_SIZE_Y;
 
-    // 3. Bounds check
+    // Bounds check
     if (chunk_x < 0 || chunk_x >= CHUNK_COUNT_X ||
         chunk_y < 0 || chunk_y >= CHUNK_COUNT_Y)
     {
         throw std::out_of_range("Global coordinates out of world bounds");
     }
 
-    // 4. Convert chunk coordinates to index
+    // Convert chunk coordinates to index
     int chunk_index = chunk_y * CHUNK_COUNT_X + chunk_x;
 
-    // 5. Return the element inside the chunk
+    // Return the element inside the chunk
     return m_chunks[chunk_index].at(local_x, local_y);
 }
 
@@ -121,9 +121,7 @@ void WorldManager::step()
     static thread_local std::vector<uint8_t> had_decisions;
     had_decisions.assign(active_count, 0);
 
-    // =========================================================
-    // PHASE 1: collect decisions (NO WRITES)
-    // =========================================================
+    //  collect decisions (NO WRITES)
     for (size_t i = 0; i < active_count; ++i)
     {
         Chunk* c = m_active_chunks[i];
@@ -138,9 +136,7 @@ void WorldManager::step()
         c->clear_dirty();
     }
 
-    // =========================================================
-    // PHASE 2: apply in-chunk decisions
-    // =========================================================
+    //  apply in-chunk decisions
     m_cross.clear();
 
     for (size_t i = 0; i < active_count; ++i)
@@ -154,16 +150,12 @@ void WorldManager::step()
             m_cross.insert(m_cross.end(), outside.begin(), outside.end());
     }
 
-    // =========================================================
-    // PHASE 3: resolve cross-chunk swaps
+    //  resolve cross-chunk swaps
     // (may activate more chunks; that's OK now)
-    // =========================================================
     if (!m_cross.empty())
         apply_cross_chunk_swaps(m_cross);
 
-    // =========================================================
-    // PHASE 4: deactivate stable chunks from the frozen set only
-    // =========================================================
+    //  deactivate stable chunks from the frozen set only
     for (size_t i = 0; i < active_count; ++i)
     {
         Chunk* c = m_active_chunks[i];
@@ -183,53 +175,6 @@ void WorldManager::step()
         // Dirty should represent "needs work next tick".
     }
 }
-//void WorldManager::step()
-//{
-//    // Ensure pointer array is sized to active count (cheap)
-//    m_decision_ptrs.clear();
-//    m_decision_ptrs.reserve(m_active_chunks.size());
-//	m_chunks_to_deactivate.clear();
-//
-//    // PHASE 1: collect decisions (no writes)
-//    for (Chunk* c : m_active_chunks)
-//    {
-//        // process_movement returns a reference to chunk-owned decision vector
-//		std::vector<MoveDecision>& decisions = c->process_movement();
-//		if (decisions.empty())
-//		{
-//			// mark the chunk for deactivation
-//			m_chunks_to_deactivate.push_back(c);
-//		}
-//        m_decision_ptrs.push_back(&decisions);
-//    }
-//
-//    // PHASE 2: apply decisions
-//    m_cross.clear();
-//
-//    for (size_t i = 0; i < m_active_chunks.size(); ++i)
-//    {
-//        Chunk* c = m_active_chunks[i];
-//        const std::vector<MoveDecision>& decisions = *m_decision_ptrs[i];
-//
-//        std::vector<MoveDecision> outside = c->apply_decisions(decisions);
-//        m_cross.insert(m_cross.end(), outside.begin(), outside.end());
-//    }
-//
-//	for (Chunk* c : m_chunks_to_deactivate)
-//	{
-//		deactivate_chunk(*c);
-//		c->clear_dirty();
-//	}
-//
-//    // PHASE 3: resolve cross-chunk movement
-//    if (!m_cross.empty())
-//    {
-//        apply_cross_chunk_swaps(m_cross);
-//    }
-//
-//    // Optional: deactivate chunks that became stable (if you track that)
-//    // e.g., if process/apply says "no moves", you can deactivate_chunk(*c)
-//}
 
 void WorldManager::apply_cross_chunk_swaps(const std::vector<MoveDecision>& cross)
 {
@@ -249,7 +194,7 @@ void WorldManager::apply_cross_chunk_swaps(const std::vector<MoveDecision>& cros
     {
         if (d.move_type != MoveType::Swap) continue;
 
-        // --- 1) Convert local coords (possibly negative/oob) to GLOBAL ---
+        //  Convert local coords (possibly negative/oob) to GLOBAL
         const int base_gx = d.origin_cx * W;
         const int base_gy = d.origin_cy * H;
 
@@ -258,7 +203,7 @@ void WorldManager::apply_cross_chunk_swaps(const std::vector<MoveDecision>& cros
         const int new_gx = base_gx + d.new_x;
         const int new_gy = base_gy + d.new_y;
 
-        // --- 2) Map GLOBAL -> owning chunk + local coords (works for negatives) ---
+        //  Map GLOBAL -> owning chunk + local coords (works for negatives)
         const int old_cx = floor_div(old_gx, W);
         const int old_cy = floor_div(old_gy, H);
         const int new_cx = floor_div(new_gx, W);
@@ -276,7 +221,7 @@ void WorldManager::apply_cross_chunk_swaps(const std::vector<MoveDecision>& cros
         const int new_lx = floor_mod(new_gx, W);
         const int new_ly = floor_mod(new_gy, H);
 
-        // --- 3) Conflict protection (each cell max once) ---
+        //  Conflict protection (each cell max once)
         uint8_t* used_old = used_for(old_cx, old_cy);
         uint8_t* used_new = used_for(new_cx, new_cy);
 
@@ -291,7 +236,7 @@ void WorldManager::apply_cross_chunk_swaps(const std::vector<MoveDecision>& cros
         used_old[old_i] = 1;
         used_new[new_i] = 1;
 
-        // --- 4) Apply swap across chunks ---
+        //  Apply swap across chunks
         Chunk& c_old = chunk_at(old_cx, old_cy);
         Chunk& c_new = chunk_at(new_cx, new_cy);
 

@@ -46,14 +46,11 @@ public:
 
 	uint32_t active_index = UINT32_MAX;
 
-	uint8_t border_mask = 0;
-
 private:
 	int m_world_pos_x = -2;
 	int m_world_pos_y = -2;
 
-	std::array<Element, CHUNK_SIZE_X * CHUNK_SIZE_Y> m_elements{};
-	std::array<Element, CHUNK_SIZE_X * CHUNK_SIZE_Y> m_elements_old{};
+	std::vector<Element> m_elements{};
 
 	mutable std::vector<MoveDecision> m_decisions;
 
@@ -77,7 +74,7 @@ public:
 		m_world_pos_x = x;
 		m_world_pos_y = y;
 		m_decisions.reserve(m_width * m_height);
-		m_elements.fill(Element());
+		m_elements.resize(m_width * m_height);
 		fill_with_empty();
 	}
 
