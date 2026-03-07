@@ -27,27 +27,39 @@ public:
 		//initialize the bedrock chunk
 		m_bedrock_chunk = Chunk();
 		m_bedrock_chunk.init(this, -1,-1);
+		for (int y = 0; y < CHUNK_COUNT_Y; ++y) {
+			for (int x = 0; x < CHUNK_COUNT_X; ++x) {
+				Chunk& chunk = m_chunks[index(x,y)];
+				chunk.init(this, x, y);
 
-		for (int y = 0; y < CHUNK_SIZE_Y; ++y)
-		{
-		    for (int x = 0; x < CHUNK_SIZE_X; ++x)
-		    {
-		        Element& e = m_bedrock_chunk.at(x, y);
-				e.type = ElementType::Bedrock;
-		    }
-		}
-
-		// now place the chunks around the world, around the world
-		for (int y = 0; y < CHUNK_COUNT_Y; y++)
-		{
-			for (int x = 0; x < CHUNK_COUNT_X; x++)
-			{
-				if (x == 0 || y == 0 || x == CHUNK_COUNT_X-1 || y == CHUNK_COUNT_Y-1)
-				{
-					m_chunks[index(x,y)] = m_bedrock_chunk;
+				if (x==0 || y==0 || x==CHUNK_COUNT_X-1 || y==CHUNK_COUNT_Y-1) {
+					for (int ly=0; ly<CHUNK_SIZE_Y; ++ly)
+						for (int lx=0; lx<CHUNK_SIZE_X; ++lx)
+							chunk.at(lx,ly).type = ElementType::Bedrock;
+					// optionally: chunk.deactivate / don't activate ever
 				}
 			}
 		}
+//		for (int y = 0; y < CHUNK_SIZE_Y; ++y)
+//		{
+//		    for (int x = 0; x < CHUNK_SIZE_X; ++x)
+//		    {
+//		        Element& e = m_bedrock_chunk.at(x, y);
+//				e.type = ElementType::Bedrock;
+//		    }
+//		}
+//
+//		// now place the chunks around the world, around the world
+//		for (int y = 0; y < CHUNK_COUNT_Y; y++)
+//		{
+//			for (int x = 0; x < CHUNK_COUNT_X; x++)
+//			{
+//				if (x == 0 || y == 0 || x == CHUNK_COUNT_X-1 || y == CHUNK_COUNT_Y-1)
+//				{
+//					m_chunks[index(x,y)] = m_bedrock_chunk;
+//				}
+//			}
+//		}
 
 		// now initicalize the other chunks
 		for (int y = 0; y < CHUNK_COUNT_Y; y++)

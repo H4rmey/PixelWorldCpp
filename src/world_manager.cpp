@@ -69,7 +69,7 @@ Element& WorldManager::get_element_global(int x, int y) {
     }
 
     // 4. Convert chunk coordinates to index
-    int chunk_index = chunk_y * CHUNK_SIZE_X + chunk_x;
+    int chunk_index = chunk_y * CHUNK_COUNT_X + chunk_x;
 
     // 5. Return the element inside the chunk
     return m_chunks[chunk_index].at(local_x, local_y);
@@ -107,6 +107,7 @@ void WorldManager::step()
     // Freeze the active set for this tick.
     // Cross-chunk swaps may activate additional chunks; those will run next tick.
     const size_t active_count = m_active_chunks.size();
+	printf("%d\n", active_count);
     if (active_count == 0)
         return;
 

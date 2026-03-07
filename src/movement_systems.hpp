@@ -6,53 +6,13 @@
 #include "helpers/element_type.h"
 
 
-#include <cstdint>
-#include <limits>
 
-// PCG-inspired 32-bit hash (the common variant includes the extra multiply)
-static inline uint32_t pcg_hash(uint32_t input)
-{
-    uint32_t state = input * 747796405u + 2891336453u;
-    uint32_t word  = ((state >> ((state >> 28u) + 4u)) ^ state) * 277803737u;
-    return (word >> 22u) ^ word;
-}
+#include <random>
 
-// Convert 32-bit uint to uniform float in [0,1).
-// Uses the top 24 bits (exactly representable in float) to avoid precision bias.
-static inline float u32_to_unit_float(uint32_t x)
-{
-    // Take top 24 bits -> integer in [0, 2^24-1]
-    // Multiply by 1/2^24 to get [0,1)
-    return (x >> 8) * (1.0f / 16777216.0f); // 2^24
-}
-
-// Good coin flip: hash the seed, then use 1 bit (or compare to half).
-static inline bool coin_flip(uint32_t seed)
-{
-    return (pcg_hash(seed) & 1u) != 0u;
-}
-
-// If you want a float threshold coin flip:
-static inline bool coin_flip_p(uint32_t seed, float p)
-{
-    // p in [0,1]
-    return u32_to_unit_float(pcg_hash(seed)) < p;
-}
-
-static inline uint32_t seed_from_cell(const Chunk& chunk, int x, int y, uint32_t frame = 0u)
-{
-    // Convert to world-space cell coords (adjust these if your world_pos is already in cells)
-    const uint32_t wx = (uint32_t)(chunk.get_world_pos_x() + x);
-    const uint32_t wy = (uint32_t)(chunk.get_world_pos_y() + y);
-
-    // Mix with distinct odd constants (spatial hash style), then run pcg_hash
-    uint32_t s = wx * 73856093u ^ wy * 19349663u ^ frame * 83492791u;
-    return pcg_hash(s);
-}
-
-static inline bool coin_flip_cell(const Chunk& chunk, int x, int y, uint32_t frame = 0u)
-{
-    return (seed_from_cell(chunk, x, y, frame) & 1u) != 0u;
+bool fastRandomBool() {
+    static thread_local std::mt19937 rng(std::random_device{}());
+    static thread_local std::bernoulli_distribution dist(0.5);
+    return dist(rng);
 }
 
 inline int density(ElementType t) {
@@ -99,8 +59,7 @@ public:
         if (canSwap(x, y+1)) return {x,y,x,y+1,0,0,MoveType::Swap};
 
         // Randomize diagonals
-		bool leftFirst = coin_flip_cell(chunk, x, y /*, frame */);
-		std::printf("bool: %d\n", leftFirst);
+		bool leftFirst = fastRandomBool();
         int dx1 = leftFirst ? -1 : 1;
         int dx2 = -dx1;
 
@@ -212,7 +171,7 @@ public:
         // Down / diagonals first
         if (canSwap(x, y+1)) return {x,y,x,y+1,0,0,MoveType::Swap};
 
-		bool leftFirst = coin_flip_cell(chunk, x, y /*, frame */);
+		bool leftFirst = fastRandomBool();
         int dx1 = leftFirst ? -1 : 1;
         int dx2 = -dx1;
 

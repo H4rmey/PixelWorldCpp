@@ -62,9 +62,14 @@ private:
 	WorldManager* m_world;
 
 public:
-	Chunk() = default;
+    Chunk() = default;
+    ~Chunk() = default;
 
-	~Chunk() = default;
+    Chunk(const Chunk&) = delete;
+    Chunk& operator=(const Chunk&) = delete;
+
+    Chunk(Chunk&&) = default;
+    Chunk& operator=(Chunk&&) = default;
 
 	void init(WorldManager* world, int x, int y)
 	{

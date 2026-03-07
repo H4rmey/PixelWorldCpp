@@ -17,14 +17,16 @@ void Chunk::set_element_local(int x, int y, const Element &e) {
 	int cx = m_world_pos_x;
 	int cy = m_world_pos_y;
 
-	if (cx > 0)
-		m_world->activate_chunk(m_world->chunk_at(cx - 1, cy));
-	if (cx < CHUNK_COUNT_X - 1)
-		m_world->activate_chunk(m_world->chunk_at(cx + 1, cy));
-	if (cy > 0)
-		m_world->activate_chunk(m_world->chunk_at(cx, cy - 1));
-	if (cy < CHUNK_COUNT_Y - 1)
-		m_world->activate_chunk(m_world->chunk_at(cx, cy + 1));
+	if (x == 0 || x == m_width-1 || y == 0 || y == m_height-1) {
+		if (cx > 0)
+			m_world->activate_chunk(m_world->chunk_at(cx - 1, cy));
+		if (cx < CHUNK_COUNT_X - 1)
+			m_world->activate_chunk(m_world->chunk_at(cx + 1, cy));
+		if (cy > 0)
+			m_world->activate_chunk(m_world->chunk_at(cx, cy - 1));
+		if (cy < CHUNK_COUNT_Y - 1)
+			m_world->activate_chunk(m_world->chunk_at(cx, cy + 1));
+	}
 
 
 
@@ -146,7 +148,7 @@ std::vector<MoveDecision> Chunk::apply_decisions(const std::vector<MoveDecision>
     static thread_local std::vector<uint8_t> used;
     used.assign(m_width * m_height, 0);
 
-    // ---- NEW: helper to wake neighbor if a BORDER cell changed ----
+    // ---- helper to wake neighbor if a BORDER cell changed ----
     auto notify_border_change = [&](int x, int y)
     {
         const int cx = m_world_pos_x;
@@ -212,7 +214,7 @@ std::vector<MoveDecision> Chunk::apply_decisions(const std::vector<MoveDecision>
         mark_dirty(d.old_x, d.old_y);
         mark_dirty(d.new_x, d.new_y);
 
-        // ---- NEW: border propagation for swaps ----
+        // ---- border propagation for swaps ----
         notify_border_change(d.old_x, d.old_y);
         notify_border_change(d.new_x, d.new_y);
         // ------------------------------------------

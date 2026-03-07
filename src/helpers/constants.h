@@ -2,14 +2,14 @@
 
 #include <cstddef>
 
-#define medium
-static constexpr int CHUNK_SIZE_X = 16;
-static constexpr int CHUNK_SIZE_Y = 16;
+#define test
+static constexpr int CHUNK_SIZE_X = 64;
+static constexpr int CHUNK_SIZE_Y = 64;
 
-#ifdef uuuuh
-	static constexpr int CHUNK_COUNT_X = 32;
-	static constexpr int CHUNK_COUNT_Y = 16;
-	static constexpr int CELL_SIZE = 3;
+#ifdef test
+	static constexpr int CHUNK_COUNT_X = 4;
+	static constexpr int CHUNK_COUNT_Y = 2;
+	static constexpr int CELL_SIZE = 5;
 	static constexpr int BRUSH_SIZE = 10;
 #endif
 

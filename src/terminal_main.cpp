@@ -106,7 +106,7 @@ int main() {
                 int cx, cy, lx, ly;
                 if (world.get_chunk_for_global_cell(gx, gy, cx, cy, lx, ly))
 				{
-					Chunk chunk = world.chunk_at(cx, cy);
+					Chunk& chunk = world.chunk_at(cx, cy);
 					ElementType type = chunk.at(lx, ly).type;
 					DrawRectangle(gx * cellSize, gy * cellSize, cellSize, cellSize, element_to_color(type));
 				}
@@ -123,7 +123,7 @@ int main() {
                 int width = CHUNK_SIZE_X * cellSize - 1;
                 int height = CHUNK_SIZE_Y * cellSize - 1;
 
-				Chunk chunk = world.chunk_at(x, y);
+				Chunk& chunk = world.chunk_at(x, y);
 				if (chunk.active_index == UINT32_MAX)
 				{
                 	DrawRectangleLines(posx, posy, width, height, RED);
@@ -143,7 +143,7 @@ int main() {
                 int posx = x * CHUNK_SIZE_X * cellSize;
                 int posy = y * CHUNK_SIZE_Y * cellSize;
 
-				Chunk chunk = world.chunk_at(x, y);
+				Chunk& chunk = world.chunk_at(x, y);
 
 				Rect r = chunk.get_dirty_rect();
 
