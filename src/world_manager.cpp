@@ -107,7 +107,6 @@ void WorldManager::step()
     // Freeze the active set for this tick.
     // Cross-chunk swaps may activate additional chunks; those will run next tick.
     const size_t active_count = m_active_chunks.size();
-	printf("%d\n", active_count);
     if (active_count == 0)
         return;
 
@@ -126,7 +125,7 @@ void WorldManager::step()
     {
         Chunk* c = m_active_chunks[i];
 
-        std::vector<MoveDecision>& decisions = c->process_movement();
+        std::vector<MoveDecision>& decisions = c->process_movement(m_bias);
         m_decision_ptrs.push_back(&decisions);
 
         had_decisions[i] = static_cast<uint8_t>(!decisions.empty());
@@ -174,6 +173,7 @@ void WorldManager::step()
         // IMPORTANT: do NOT clear dirty here.
         // Dirty should represent "needs work next tick".
     }
+	m_bias = !m_bias;
 }
 
 void WorldManager::apply_cross_chunk_swaps(const std::vector<MoveDecision>& cross)

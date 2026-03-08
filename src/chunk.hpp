@@ -122,6 +122,6 @@ public:
 
 	const Element &get_element_global(int x, int y) const;
 	const Element &get_element_local(int x, int y) const;
-	std::vector<MoveDecision> &process_movement();
+	std::vector<MoveDecision> &process_movement(bool bias);
 	std::vector<MoveDecision> apply_decisions(const std::vector<MoveDecision>& decisions);
 };

@@ -116,24 +116,47 @@ const Element& Chunk::get_element_global(int global_x, int global_y) const {
     return neighbor.get_element_global(global_x, global_y);
 }
 
-std::vector<MoveDecision> &Chunk::process_movement() {
+std::vector<MoveDecision> &Chunk::process_movement(bool bias) {
     m_decisions.clear();
 
     //for (int y = 0; y < m_height; ++y) {
     //    for (int x = 0; x < m_width; ++x) {
-    for (int y = m_dirty_rect.min_y-3; y < m_dirty_rect.max_y+3; ++y) {
-        for (int x = m_dirty_rect.min_x-3; x < m_dirty_rect.max_x+3; ++x) {
-			if (y < 0 || x < 0 || x >= CHUNK_SIZE_X || y >= CHUNK_SIZE_Y)
-				continue;
-            MoveDecision d = m_elements[index(x, y)].movement->process(x, y, *this);
+	//
+	for (int y = m_dirty_rect.max_y + 3; y >= m_dirty_rect.min_y - 3; --y)
+	{
+		if (bias)
+		{
+			for (int x = m_dirty_rect.max_x + 3; x >= m_dirty_rect.min_x - 3; --x)
+			{
+				if (y < 0 || x < 0 || x >= CHUNK_SIZE_X || y >= CHUNK_SIZE_Y)
+					continue;
 
-            if (d.move_type != MoveType::Stay) {
-				d.origin_cx = m_world_pos_x;
-				d.origin_cy = m_world_pos_y;
-				m_decisions.push_back(d);
-            }
-        }
-    }
+				MoveDecision d = m_elements[index(x, y)].movement->process(x, y, *this);
+
+				if (d.move_type != MoveType::Stay) {
+					d.origin_cx = m_world_pos_x;
+					d.origin_cy = m_world_pos_y;
+					m_decisions.push_back(d);
+				}
+			}
+		}
+		else
+		{
+			for (int x = m_dirty_rect.min_x - 3; x <= m_dirty_rect.max_x + 3; ++x)
+			{
+				if (y < 0 || x < 0 || x >= CHUNK_SIZE_X || y >= CHUNK_SIZE_Y)
+					continue;
+
+				MoveDecision d = m_elements[index(x, y)].movement->process(x, y, *this);
+
+				if (d.move_type != MoveType::Stay) {
+					d.origin_cx = m_world_pos_x;
+					d.origin_cy = m_world_pos_y;
+					m_decisions.push_back(d);
+				}
+			}
+		}
+	}
 
     return m_decisions;
 }
@@ -220,48 +243,3 @@ std::vector<MoveDecision> Chunk::apply_decisions(const std::vector<MoveDecision>
 
     return out_of_bounds;
 }
-//std::vector<MoveDecision> Chunk::apply_decisions(const std::vector<MoveDecision>& decisions) {
-//    std::vector<MoveDecision> out_of_bounds;
-//    out_of_bounds.reserve(decisions.size() / 8); // rough guess
-//
-//    // Reuse a per-thread buffer to avoid allocations each tick
-//    static thread_local std::vector<uint8_t> used;
-//    used.assign(m_width * m_height, 0);
-//
-//    for (const MoveDecision& d : decisions)
-//    {
-//        if (d.move_type != MoveType::Swap)
-//            continue;
-//
-//        // If you still store x/y in MoveDecision, validate bounds:
-//        const bool old_in = (unsigned)d.old_x < (unsigned)m_width &&
-//                            (unsigned)d.old_y < (unsigned)m_height;
-//        const bool new_in = (unsigned)d.new_x < (unsigned)m_width &&
-//                            (unsigned)d.new_y < (unsigned)m_height;
-//
-//        if (!old_in || !new_in) {
-//            out_of_bounds.push_back(d);
-//            continue;
-//        }
-//
-//        const uint16_t oi = (uint16_t)index(d.old_x, d.old_y);
-//        const uint16_t ni = (uint16_t)index(d.new_x, d.new_y);
-//
-//        // Conflict check: each cell max 1 swap per tick
-//        if (used[oi] || used[ni]) {
-//            // conflict policy: skip (or you can push to out_of_bounds or a retry list)
-//            continue;
-//        }
-//
-//        used[oi] = 1;
-//		used[ni] = 1;
-//
-//        std::swap(m_elements[oi], m_elements[ni]);
-//
-//        mark_dirty(d.old_x, d.old_y);
-//        mark_dirty(d.new_x, d.new_y);
-//    }
-//
-//    return out_of_bounds;
-//}
-

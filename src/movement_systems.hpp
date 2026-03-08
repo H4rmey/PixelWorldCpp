@@ -30,13 +30,6 @@ inline bool can_swap(const Element& a, const Element& b) {
     // heavier falls through lighter
     return density(a.type) > density(b.type);
 }
-//inline bool coin_flip(int x, int y, uint32_t frame) {
-//    uint32_t h = 2166136261u;
-//    h = (h ^ (uint32_t)x) * 16777619u;
-//    h = (h ^ (uint32_t)y) * 16777619u;
-//    h = (h ^ frame) * 16777619u;
-//    return (h & 1u) != 0u;
-//}
 
 
 // ---------------------------------------------------------
@@ -56,54 +49,30 @@ public:
         };
 
         // Down
-        if (canSwap(x, y+1)) return {x,y,x,y+1,0,0,MoveType::Swap};
+        if (canSwap(x, y+1)) return {x, y, x, y+1, 0, 0, MoveType::Swap};
 
         // Randomize diagonals
 		bool leftFirst = fastRandomBool();
+		printf("bool: %d\n", leftFirst);
         int dx1 = leftFirst ? -1 : 1;
         int dx2 = -dx1;
 
-        if (canSwap(x+dx1, y+1)) return {x,y,x+dx1,y+1,0,0,MoveType::Swap};
-        if (canSwap(x+dx2, y+1)) return {x,y,x+dx2,y+1,0,0,MoveType::Swap};
+        if (canSwap(x+dx1, y+1)) return {x, y, x+dx1, y+1, 0, 0, MoveType::Swap};
+        if (canSwap(x+dx2, y+1)) return {x, y, x+dx2, y+1, 0, 0, MoveType::Swap};
 
-        // Optional: slide along ledges (lookahead)
-        if (chunk.get_element_local(x-1, y).is_empty() && canSwap(x-1, y+1))
-            return {x,y,x-1,y,0,0,MoveType::Swap};
-        if (chunk.get_element_local(x+1, y).is_empty() && canSwap(x+1, y+1))
-            return {x,y,x+1,y,0,0,MoveType::Swap};
+        //// Optional: slide along ledges (lookahead)
+        //if (chunk.get_element_local(x-1, y).is_empty() && canSwap(x-1, y+1))
+		//{
+        //    return {x,y,x-1,y,0,0,MoveType::Swap};
+		//}
+        //if (chunk.get_element_local(x+1, y).is_empty() && canSwap(x+1, y+1))
+		//{
+        //    return {x,y,x+1,y,0,0,MoveType::Swap};
+		//}
 
         return MoveDecision::Stay(x, y);
     }
 };
-//class SandMovement : public IMovement {
-//public:
-//	MoveDecision process(int x, int y, const Chunk &chunk) const override {
-//		const Element &self = chunk.get_element_local(x, y);
-//
-//		if (self.type != ElementType::Sand)
-//			return MoveDecision::Stay(x,y);
-//
-//		// Try to fall straight down
-//		const Element &below = chunk.get_element_local(x, y + 1);
-//		if (below.is_empty()) {
-//			return { x, y, x, y + 1, 0, 0, MoveType::Swap };
-//		}
-//
-//		// Try down-left
-//		const Element &down_left = chunk.get_element_local(x - 1, y + 1);
-//		if (down_left.is_empty()) {
-//			return { x, y, x - 1, y + 1, 0, 0, MoveType::Swap };
-//		}
-//
-//		// Try down-right
-//		const Element &down_right = chunk.get_element_local(x + 1, y + 1);
-//		if (down_right.is_empty()) {
-//			return { x, y, x + 1, y + 1, 0, 0, MoveType::Swap };
-//		}
-//
-//		return MoveDecision::Stay(x, y);
-//	}
-//};
 
 // ---------------------------------------------------------
 // SolidMovement — does not move
@@ -205,41 +174,6 @@ public:
         return MoveDecision::Stay(x, y);
     }
 };
-//class LiquidMovement : public IMovement {
-//public:
-//	MoveDecision process(int x, int y, const Chunk &chunk) const override {
-//		const Element &self = chunk.get_element_local(x, y);
-//		if (self.is_empty())
-//			return MoveDecision::Stay(x, y);
-//
-//		// Down
-//		const Element &down = chunk.get_element_local(x, y + 1);
-//		if (down.is_empty())
-//			return { x, y, x, y + 1, 0, 0, MoveType::Swap };
-//
-//		// Down-left
-//		const Element &down_left = chunk.get_element_local(x - 1, y + 1);
-//		if (down_left.is_empty())
-//			return { x, y, x - 1, y + 1, 0, 0, MoveType::Swap };
-//
-//		// Down-right
-//		const Element &down_right = chunk.get_element_local(x + 1, y + 1);
-//		if (down_right.is_empty())
-//			return { x, y, x + 1, y + 1, 0, 0, MoveType::Swap };
-//
-//		// Spread left
-//		const Element &left = chunk.get_element_local(x - 1, y);
-//		if (left.is_empty())
-//			return { x, y, x - 1, y, 0, 0, MoveType::Swap };
-//
-//		// Spread right
-//		const Element &right = chunk.get_element_local(x + 1, y);
-//		if (right.is_empty())
-//			return { x, y, x + 1, y, 0, 0, MoveType::Swap };
-//
-//		return MoveDecision::Stay(x, y);
-//	}
-//};
 
 // ---------------------------------------------------------
 // WaterMovement — inherits LiquidMovement (optional)
