@@ -190,7 +190,8 @@ int main() {
                                 erase ? &empty_movement : movement_ptr;
 
                             world.chunk_at(cx, cy).set_element_local(
-                                lx, ly, Element(type_to_set, move_ptr));
+                                lx, ly,
+                                Element(type_to_set, move_ptr, Physics::Empty));
                         }
                     }
                 }
