@@ -1,25 +1,25 @@
-#include "movement/IMovement.h"
-#include "raylib.h"
 #include "world_manager.hpp"
 #include "helpers/constants.h"
 #include "helpers/element_type.h"
+#include "movement/IMovement.h"
 #include "movement_systems.hpp"
+#include <raylib.h>
 #include <algorithm>
-#include <cstdint>
 #include <iostream>
 
 Color element_to_color(ElementType type) {
     switch (type) {
-        case ElementType::Empty:  	return GRAY;
-        case ElementType::Sand:   	return YELLOW;
-        case ElementType::Water:  	return BLUE;
-        case ElementType::Stone:  	return GRAY;
-        case ElementType::Gas:    	return GREEN;
-        case ElementType::Bedrock:	return LIGHTGRAY;
-        case ElementType::Custom: 	return PURPLE;
+        case ElementType::Empty:   return GRAY;
+        case ElementType::Sand:    return YELLOW;
+        case ElementType::Water:   return BLUE;
+        case ElementType::Stone:   return DARKGRAY;
+        case ElementType::Gas:     return GREEN;
+        case ElementType::Bedrock: return BLACK;
+        case ElementType::Custom:  return PURPLE;
         default: return WHITE;
     }
 }
+
 int main() {
     const int cellSize = CELL_SIZE;
 
@@ -30,33 +30,32 @@ int main() {
     const int screenH = total_height * cellSize;
 
     InitWindow(screenW, screenH, "World Simulation");
-    //SetTargetFPS(60);
 
+    // World + movement systems
     static WorldManager world;
-    IMovement *movement_ptr;
     SandMovement  sand_movement;
     SolidMovement solid_movement;
     GasMovement   gas_movement;
     LiquidMovement liquid_movement;
     PowderMovement powder_movement;
     EmptyMovement  empty_movement;
-    movement_ptr = &sand_movement;
 
-    int brush_size = BRUSH_SIZE; // initial brush radius
+    IMovement* movement_ptr = &sand_movement;
+
+    int brush_size = BRUSH_SIZE;
     ElementType brush_type = ElementType::Sand;
 
     // ---------------------------
     // Camera setup
     // ---------------------------
     Camera2D camera = {};
-    camera.target = { 0.0f, 0.0f };                 // world-space target at (0,0) so old behavior matches at zoom=1
-    camera.offset = { 0.0f, 0.0f };                 // screen-space offset (top-left anchored, same as your old drawing)
+    camera.target = { 0.0f, 0.0f };
+    camera.offset = { 0.0f, 0.0f };
     camera.rotation = 0.0f;
     camera.zoom = 1.0f;
 
-    // Camera tuning
-    const float cam_pan_speed = 900.0f;             // pixels/sec in world units at zoom=1 (arrow keys)
-    const float zoom_step = 1.10f;                  // 10% per key press
+    const float cam_pan_speed = 900.0f;
+    const float zoom_step = 1.10f;
     const float zoom_min  = 0.10f;
     const float zoom_max  = 12.0f;
 
@@ -68,26 +67,23 @@ int main() {
         // Zoom (SHIFT + +/-)
         // ---------------------------
         if (shiftDown) {
-            bool zoomIn  = (IsKeyPressed(KEY_KP_ADD) || IsKeyPressed(KEY_EQUAL));   // '=' becomes '+' with shift on many layouts
+            bool zoomIn  = (IsKeyPressed(KEY_KP_ADD) || IsKeyPressed(KEY_EQUAL));
             bool zoomOut = (IsKeyPressed(KEY_KP_SUBTRACT) || IsKeyPressed(KEY_MINUS));
 
             if (zoomIn || zoomOut) {
                 Vector2 mouse_screen = GetMousePosition();
-                Vector2 mouse_world_before = GetScreenToWorld2D(mouse_screen, camera);
+                Vector2 before = GetScreenToWorld2D(mouse_screen, camera);
 
                 float newZoom = camera.zoom * (zoomIn ? zoom_step : (1.0f / zoom_step));
                 newZoom = std::clamp(newZoom, zoom_min, zoom_max);
                 camera.zoom = newZoom;
 
-                // Keep the point under the mouse stable (zoom around cursor)
-                Vector2 mouse_world_after = GetScreenToWorld2D(mouse_screen, camera);
-                camera.target.x += (mouse_world_before.x - mouse_world_after.x);
-                camera.target.y += (mouse_world_before.y - mouse_world_after.y);
+                Vector2 after = GetScreenToWorld2D(mouse_screen, camera);
+                camera.target.x += (before.x - after.x);
+                camera.target.y += (before.y - after.y);
             }
         } else {
-            // ---------------------------
-            // Brush size (+/-) (only when NOT holding SHIFT)
-            // ---------------------------
+            // Brush size
             if (IsKeyPressed(KEY_KP_ADD) || IsKeyPressed(KEY_EQUAL))
                 brush_size = std::min(90, brush_size + 1);
 
@@ -96,11 +92,10 @@ int main() {
         }
 
         // ---------------------------
-        // Pan with SHIFT + LMB drag ("grab" style)
+        // Pan with SHIFT + LMB drag
         // ---------------------------
         if (shiftDown && IsMouseButtonDown(MOUSE_LEFT_BUTTON)) {
-            Vector2 d = GetMouseDelta(); // screen-space delta since last frame
-            // grab style: dragging right moves world right -> camera target moves left
+            Vector2 d = GetMouseDelta();
             camera.target.x -= d.x / camera.zoom;
             camera.target.y -= d.y / camera.zoom;
         }
@@ -110,7 +105,7 @@ int main() {
         // ---------------------------
         {
             float dt = GetFrameTime();
-            float step = (cam_pan_speed * dt) / camera.zoom; // keep speed consistent at different zooms
+            float step = (cam_pan_speed * dt) / camera.zoom;
 
             if (IsKeyDown(KEY_RIGHT)) camera.target.x += step;
             if (IsKeyDown(KEY_LEFT))  camera.target.x -= step;
@@ -130,7 +125,7 @@ int main() {
         if (IsKeyPressed(KEY_SEVEN)) { brush_type = ElementType::Empty;   movement_ptr = &empty_movement; }
 
         // ---------------------------
-        // Mouse input: paint/erase (MUST use world mouse position now)
+        // Mouse input (world space)
         // ---------------------------
         Vector2 mouse_screen = GetMousePosition();
         Vector2 mouse_world  = GetScreenToWorld2D(mouse_screen, camera);
@@ -138,23 +133,22 @@ int main() {
         int gx = static_cast<int>(mouse_world.x) / cellSize;
         int gy = static_cast<int>(mouse_world.y) / cellSize;
 
-        // optional: prevent painting while you are panning with SHIFT+LMB
-        const bool isPanning = shiftDown && IsMouseButtonDown(MOUSE_LEFT_BUTTON);
+        bool isPanning = shiftDown && IsMouseButtonDown(MOUSE_LEFT_BUTTON);
 
         if (!isPanning && (IsMouseButtonDown(MOUSE_LEFT_BUTTON) || IsMouseButtonDown(MOUSE_RIGHT_BUTTON))) {
             bool erase = IsMouseButtonDown(MOUSE_RIGHT_BUTTON);
 
             for (int dy = -brush_size; dy <= brush_size; dy++) {
                 for (int dx = -brush_size; dx <= brush_size; dx++) {
-                    if (dx*dx + dy*dy <= brush_size*brush_size) { // circle
+                    if (dx*dx + dy*dy <= brush_size*brush_size) {
                         int px = gx + dx;
                         int py = gy + dy;
 
                         int cx, cy, lx, ly;
                         if (world.get_chunk_for_global_cell(px, py, cx, cy, lx, ly)) {
                             ElementType type_to_set = erase ? ElementType::Empty : brush_type;
-
                             IMovement* move_ptr = erase ? &empty_movement : movement_ptr;
+
                             world.chunk_at(cx, cy).set_element_local(lx, ly, Element(type_to_set, move_ptr));
                         }
                     }
@@ -162,24 +156,55 @@ int main() {
             }
         }
 
+        // ---------------------------
+        // Step world
+        // ---------------------------
         world.step();
 
+        // ---------------------------
+        // Rendering
+        // ---------------------------
         BeginDrawing();
         ClearBackground(WHITE);
 
-        // =========================================================
-        // World rendering under camera
-        // =========================================================
         BeginMode2D(camera);
 
-        // --- Draw all elements ---
-        for (int gy2 = 0; gy2 < total_height; ++gy2) {
-            for (int gx2 = 0; gx2 < total_width; ++gx2) {
-                int cx, cy, lx, ly;
-                if (world.get_chunk_for_global_cell(gx2, gy2, cx, cy, lx, ly)) {
-                    Chunk& chunk = world.chunk_at(cx, cy);
-                    ElementType type = chunk.at(lx, ly).type;
-                    DrawRectangle(gx2 * cellSize, gy2 * cellSize, cellSize, cellSize, element_to_color(type));
+        // =========================================================
+        // Render ONLY active chunks (but camera still sees full world)
+        // =========================================================
+        for (int cy = 0; cy < CHUNK_COUNT_Y; cy++) {
+            for (int cx = 0; cx < CHUNK_COUNT_X; cx++) {
+
+                Chunk& chunk = world.chunk_at(cx, cy);
+
+                int base_x = cx * CHUNK_SIZE_X;
+                int base_y = cy * CHUNK_SIZE_Y;
+
+                // Inactive chunk → draw faint background (cheap)
+                if (chunk.active_index == UINT32_MAX) {
+                    DrawRectangle(
+                        base_x * cellSize,
+                        base_y * cellSize,
+                        CHUNK_SIZE_X * cellSize,
+                        CHUNK_SIZE_Y * cellSize,
+                        Color{230,230,230,255}
+                    );
+                    continue;
+                }
+
+                // Active chunk → draw all its cells
+                for (int y = 0; y < CHUNK_SIZE_Y; y++) {
+                    for (int x = 0; x < CHUNK_SIZE_X; x++) {
+                        ElementType type = chunk.at(x, y).type;
+                        Color c = element_to_color(type);
+
+                        DrawRectangle(
+                            (base_x + x) * cellSize,
+                            (base_y + y) * cellSize,
+                            cellSize, cellSize,
+                            c
+                        );
+                    }
                 }
             }
         }
@@ -193,33 +218,12 @@ int main() {
                 int height = CHUNK_SIZE_Y * cellSize - 1;
 
                 Chunk& chunk = world.chunk_at(x, y);
-                DrawRectangleLines(posx, posy, width, height, (chunk.active_index == UINT32_MAX) ? RED : GREEN);
+                DrawRectangleLines(posx, posy, width, height,
+                    (chunk.active_index == UINT32_MAX) ? RED : GREEN);
             }
         }
 
-        // --- Draw chunk dirty rect outlines ---
-        for (int y = 0; y < CHUNK_COUNT_Y; y++) {
-            for (int x = 0; x < CHUNK_COUNT_X; x++) {
-                int posx = x * CHUNK_SIZE_X * cellSize;
-                int posy = y * CHUNK_SIZE_Y * cellSize;
-
-                Chunk& chunk = world.chunk_at(x, y);
-                Rect r = chunk.get_dirty_rect();
-
-                if (r.max_x == -1 || r.max_y == -1) continue;
-
-                int width  = (r.max_x - r.min_x + 1) * cellSize;
-                int height = (r.max_y - r.min_y + 1) * cellSize;
-
-                DrawRectangleLines(
-                    posx + cellSize * r.min_x,
-                    posy + cellSize * r.min_y,
-                    width, height, PURPLE
-                );
-            }
-        }
-
-        // --- Draw brush preview in WORLD space ---
+        // --- Draw brush preview ---
         DrawCircleLines(
             static_cast<int>(mouse_world.x),
             static_cast<int>(mouse_world.y),
@@ -227,13 +231,9 @@ int main() {
             RED
         );
 
-		EndMode2D();
+        EndMode2D();
 
-        // =========================================================
-        // UI overlay (screen space)
-        // =========================================================
         DrawFPS(30, 30);
-
         EndDrawing();
     }
 

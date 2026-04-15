@@ -66,6 +66,7 @@ public:
 
 	Element& get_element_global(int x, int y);
 	const Element& get_element_global(int x, int y) const;
+	const std::vector<Chunk*>& get_active_chunks() const { return m_active_chunks; }
 
     // Map global cell coordinates to chunk + local coords
 	bool get_chunk_for_global_cell(
