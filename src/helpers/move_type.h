@@ -1,8 +1,3 @@
 #pragma once
 
-enum class MoveType {
-	Stay,
-	Move,
-	Swap,
-	Transform
-};
+enum class MoveType { Stay, Move, Swap, Transform };
