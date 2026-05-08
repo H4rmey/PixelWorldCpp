@@ -20,5 +20,5 @@ class Element {
     inline bool is_empty() const { return type == ElementType::Empty; }
 
     // Returns a reference to a static empty element
-    static const Element &Empty();
+    static Element &Empty();
 };

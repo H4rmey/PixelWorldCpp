@@ -7,9 +7,32 @@
 
 #include <random>
 
+inline bool fastRandomBool(float distribution) {
+    static thread_local std::mt19937                rng(std::random_device{}());
+    static thread_local std::bernoulli_distribution dist(distribution);
+    return dist(rng);
+}
+
 inline bool fastRandomBool() {
     static thread_local std::mt19937                rng(std::random_device{}());
     static thread_local std::bernoulli_distribution dist(0.5);
+    return dist(rng);
+}
+
+inline int fastRandomIntRange(int min = 0, int max = 255) {
+    static thread_local std::mt19937 rng(std::random_device{}());
+    // Note: distribution range must be set at construction or passed as param
+    std::uniform_int_distribution<int> dist(min, max);
+    return dist(rng);
+}
+inline float fastRandomFloatRange(float min = 0.0f, float max = 1.0f) {
+    static thread_local std::mt19937      rng(std::random_device{}());
+    std::uniform_real_distribution<float> dist(min, max);
+    return dist(rng);
+}
+inline float fastRandomFloat01() {
+    static thread_local std::mt19937 rng(std::random_device{}());
+    static thread_local std::uniform_real_distribution<float> dist(0.0f, 1.0f);
     return dist(rng);
 }
 
@@ -41,43 +64,100 @@ inline bool can_swap(const Element &a, const Element &b) {
 
 class SandMovement : public IMovement {
   public:
-    MoveDecision process(int x, int y, const Chunk &chunk) const override {
-        const Element &self = chunk.get_element_local(x, y);
-        if (self.type != ElementType::Sand)
+    MoveDecision process(int x, int y, Chunk &chunk) const override {
+        // get the element at the location
+        Element &self = chunk.get_element_local(x, y);
+
+        if (!self.physics.canMove_y) {
+            // kill momentum
             return MoveDecision::Stay(x, y);
+        }
+
+        // element must be sand
+        if (self.type != ElementType::Sand) {
+            // kill momentum
+            return MoveDecision::Stay(x, y);
+        }
 
         auto canSwap = [&](int nx, int ny) -> bool {
-            const Element &t = chunk.get_element_local(nx, ny);
-            if (t.is_empty())
+            Element &t = chunk.get_element_local(nx, ny);
+            if (t.is_empty()) {
                 return true;
+            }
             return density(self.type) > density(t.type);
         };
 
+        auto allowMoveX = [&](int nx, int ny) {
+            int global_x;
+            int global_y;
+            chunk.get_global_coords(nx, ny, global_x, global_y);
+
+            int dx[] = {0, 0, -1, 1};
+            int dy[] = {-1, 1, 0, 0};
+
+            for (int i = 0; i < 4; ++i) {
+                int neighbor_gx = global_x + dx[i];
+                int neighbor_gy = global_y + dy[i];
+
+                Element &neighbor =
+                    chunk.get_element_global(neighbor_gx, neighbor_gy);
+
+                if (fastRandomBool(neighbor.physics.stability)) {
+                    neighbor.physics.canMove_x = true;
+                }
+            }
+        };
+
         // Down
-        if (canSwap(x, y + 1))
+        if (canSwap(x, y + 1)) {
+            self.physics.terminal_velocity_y++;
+            allowMoveX(x, y);
             return {x, y, x, y + 1, 0, 0, MoveType::Swap};
+        }
+
+        // cancel the horizontal movement
+        if (!self.physics.canMove_x) {
+            // kill momentum
+            return MoveDecision::Stay(x, y);
+        }
+
+        if (fastRandomBool(self.physics.friction)) {
+            // kill momentum
+            self.physics.canMove_x = false;
+            return MoveDecision::Stay(x, y);
+        }
 
         // Randomize diagonals
-        bool leftFirst = fastRandomBool();
-        printf("bool: %d\n", leftFirst);
-        int dx1 = leftFirst ? -1 : 1;
-        int dx2 = -dx1;
+        bool   leftFirst = fastRandomBool();
+        int8_t dx1       = leftFirst ? -1 : 1;
 
-        if (canSwap(x + dx1, y + 1))
+        // move down to the left
+        if (canSwap(x + dx1, y + 1)) {
+            self.physics.terminal_velocity_y++;
             return {x, y, x + dx1, y + 1, 0, 0, MoveType::Swap};
-        if (canSwap(x + dx2, y + 1))
-            return {x, y, x + dx2, y + 1, 0, 0, MoveType::Swap};
+        }
+        // move down to the right
+        if (canSwap(x - dx1, y + 1)) {
+            self.physics.terminal_velocity_y++;
+            return {x, y, x - dx1, y + 1, 0, 0, MoveType::Swap};
+        }
 
-        //// Optional: slide along ledges (lookahead)
-        // if (chunk.get_element_local(x-1, y).is_empty() && canSwap(x-1, y+1))
-        //{
-        //    return {x,y,x-1,y,0,0,MoveType::Swap};
-        //}
-        // if (chunk.get_element_local(x+1, y).is_empty() && canSwap(x+1, y+1))
-        //{
-        //    return {x,y,x+1,y,0,0,MoveType::Swap};
-        //}
+        // if the resolve direction is 0
+        // 	this sets a resolve direction so the pixel does not move
+        //	side to side after landing
+        if (self.physics.velocity_resolve_dir_x == 0) {
+            self.physics.velocity_resolve_dir_x = fastRandomBool() ? -1 : 1;
+        }
+        if (self.physics.terminal_velocity_y > 0) {
+            self.physics.terminal_velocity_y--;
+            int dx1 = self.physics.velocity_resolve_dir_x;
+            if (canSwap(x + dx1, y)) {
+                return {x, y, x + dx1, y, 0, 0, MoveType::Swap};
+            }
+        }
 
+        self.physics.terminal_velocity_y    = 0;
+        self.physics.velocity_resolve_dir_x = 0;
         return MoveDecision::Stay(x, y);
     }
 };
@@ -87,7 +167,7 @@ class SandMovement : public IMovement {
 // ---------------------------------------------------------
 class SolidMovement : public IMovement {
   public:
-    MoveDecision process(int x, int y, const Chunk &chunk) const override {
+    MoveDecision process(int x, int y, Chunk &chunk) const override {
         return MoveDecision::Stay(x, y);
     }
 };
@@ -97,7 +177,7 @@ class SolidMovement : public IMovement {
 // ---------------------------------------------------------
 class GasMovement : public IMovement {
   public:
-    MoveDecision process(int x, int y, const Chunk &chunk) const override {
+    MoveDecision process(int x, int y, Chunk &chunk) const override {
         const Element &self = chunk.get_element_local(x, y);
         if (self.is_empty())
             return MoveDecision::Stay(x, y);
@@ -135,7 +215,7 @@ class GasMovement : public IMovement {
 // ---------------------------------------------------------
 class LiquidMovement : public IMovement {
   public:
-    MoveDecision process(int x, int y, const Chunk &chunk) const override {
+    MoveDecision process(int x, int y, Chunk &chunk) const override {
         const Element &self = chunk.get_element_local(x, y);
         if (self.is_empty())
             return MoveDecision::Stay(x, y);
@@ -205,7 +285,7 @@ class WaterMovement : public LiquidMovement {
 // ---------------------------------------------------------
 class PowderMovement : public IMovement {
   public:
-    MoveDecision process(int x, int y, const Chunk &chunk) const override {
+    MoveDecision process(int x, int y, Chunk &chunk) const override {
         return MoveDecision::Stay(x, y);
     }
 };

@@ -2,10 +2,10 @@
 
 #include <cstddef>
 
-#define test
+#define small
 
-static constexpr int CHUNK_SIZE_X = 16 * 1;
-static constexpr int CHUNK_SIZE_Y = 16 * 1;
+static constexpr int CHUNK_SIZE_X = 16 * 2;
+static constexpr int CHUNK_SIZE_Y = 16 * 2;
 
 #ifdef test
 static constexpr int CHUNK_COUNT_X = 8 * 8;
@@ -24,7 +24,7 @@ static constexpr int BRUSH_SIZE    = 10;
 #ifdef medium
 static constexpr int CHUNK_COUNT_X = 16;
 static constexpr int CHUNK_COUNT_Y = 8;
-static constexpr int CELL_SIZE     = 2;
+static constexpr int CELL_SIZE     = 3;
 static constexpr int BRUSH_SIZE    = 8;
 #endif
 

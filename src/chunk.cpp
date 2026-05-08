@@ -1,5 +1,6 @@
 #include "chunk.hpp"
 #include "helpers/constants.h"
+#include "movement/IMovement.h"
 #include "world_manager.hpp"
 #include <iostream>
 #include <raylib.h>
@@ -59,7 +60,14 @@ void Chunk::set_element_local(int x, int y, const Element &e) {
     mark_dirty(x, y);
 }
 
-const Element &Chunk::get_element_local(int x, int y) const {
+// Returns the global coordinate of a specific local tile
+void Chunk::get_global_coords(int local_x, int local_y, int &out_global_x,
+                              int &out_global_y) const {
+    out_global_x = m_world_pos_x * m_width + local_x;
+    out_global_y = m_world_pos_y * m_height + local_y;
+}
+
+Element &Chunk::get_element_local(int x, int y) {
     // Fast path (very common case)
     if ((unsigned)x < m_width && (unsigned)y < m_height) {
         return m_elements[y * m_width + x];
@@ -79,7 +87,11 @@ const Element &Chunk::get_element_local(int x, int y) const {
     return neighbor.m_elements[local_y * m_width + local_x];
 }
 
-const Element &Chunk::get_element_global(int global_x, int global_y) const {
+Element &Chunk::get_element_global(int global_x, int global_y) {
+    if (global_x < 0 || global_y < 0 || global_x >= WORLD_SIZE_X ||
+        global_y >= WORLD_SIZE_Y) {
+        return Element::Empty();
+    }
     // Convert global → local
     int local_x = global_x - m_world_pos_x * m_width;
     int local_y = global_y - m_world_pos_y * m_height;

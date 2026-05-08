@@ -191,7 +191,7 @@ int main() {
 
                             world.chunk_at(cx, cy).set_element_local(
                                 lx, ly,
-                                Element(type_to_set, move_ptr, Physics::Empty));
+                                Element(type_to_set, move_ptr, Physics::Sand));
                         }
                     }
                 }
@@ -223,13 +223,13 @@ int main() {
                 int base_y = cy * CHUNK_SIZE_Y;
 
                 // Inactive chunk → draw faint background (cheap)
-                if (chunk.active_index == UINT32_MAX) {
-                    DrawRectangle(base_x * cellSize, base_y * cellSize,
-                                  CHUNK_SIZE_X * cellSize,
-                                  CHUNK_SIZE_Y * cellSize,
-                                  Color{230, 230, 230, 255});
-                    continue;
-                }
+                // if (chunk.active_index == UINT32_MAX) {
+                //    DrawRectangle(base_x * cellSize, base_y * cellSize,
+                //                  CHUNK_SIZE_X * cellSize,
+                //                  CHUNK_SIZE_Y * cellSize,
+                //                  Color{230, 230, 230, 255});
+                //    continue;
+                //}
 
                 // Active chunk → draw all its cells
                 for (int y = 0; y < CHUNK_SIZE_Y; y++) {

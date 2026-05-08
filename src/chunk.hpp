@@ -114,8 +114,12 @@ class Chunk {
 
     inline const Rect &get_dirty_rect_local() const { return m_dirty_rect; }
 
-    const Element             &get_element_global(int x, int y) const;
-    const Element             &get_element_local(int x, int y) const;
+    Element &get_element_global(int x, int y);
+    Element &get_element_local(int x, int y);
+
+    void get_global_coords(int local_x, int local_y, int &out_global_x,
+                           int &out_global_y) const;
+
     std::vector<MoveDecision> &process_movement(bool bias);
     std::vector<MoveDecision>
     apply_decisions(const std::vector<MoveDecision> &decisions);
