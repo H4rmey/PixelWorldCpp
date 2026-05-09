@@ -2,10 +2,11 @@
 
 #include <cstddef>
 
-#define small
+#define tiny
 
-static constexpr int CHUNK_SIZE_X = 16 * 2;
-static constexpr int CHUNK_SIZE_Y = 16 * 2;
+static constexpr int CHUNK_SIZE_X  = 16 * 1;
+static constexpr int CHUNK_SIZE_Y  = 16 * 1;
+static constexpr int MAX_FRAMERATE = 10;
 
 #ifdef test
 static constexpr int CHUNK_COUNT_X = 8 * 8;
@@ -30,16 +31,16 @@ static constexpr int BRUSH_SIZE    = 8;
 
 #ifdef small
 static constexpr int CHUNK_COUNT_X = 8;
-static constexpr int CHUNK_COUNT_Y = 4;
-static constexpr int CELL_SIZE     = 7;
+static constexpr int CHUNK_COUNT_Y = 5;
+static constexpr int CELL_SIZE     = 10;
 static constexpr int BRUSH_SIZE    = 5;
 #endif
 
 #ifdef tiny
 static constexpr int CHUNK_COUNT_X = 4;
-static constexpr int CHUNK_COUNT_Y = 2;
-static constexpr int CELL_SIZE     = 9;
-static constexpr int BRUSH_SIZE    = 5;
+static constexpr int CHUNK_COUNT_Y = 3;
+static constexpr int CELL_SIZE     = 16;
+static constexpr int BRUSH_SIZE    = 1;
 #endif
 
 static constexpr std::size_t CHUNK_COUNT  = CHUNK_COUNT_X * CHUNK_COUNT_Y;

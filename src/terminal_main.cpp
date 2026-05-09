@@ -1,6 +1,7 @@
 #include "helpers/constants.h"
 #include "helpers/element_type.h"
 #include "helpers/matter_state.h"
+#include "helpers/physics.hpp"
 #include "movement/IMovement.h"
 #include "movement_systems.hpp"
 #include "world_manager.hpp"
@@ -41,6 +42,7 @@ int main() {
     const int screenH = total_height * cellSize;
 
     InitWindow(screenW, screenH, "World Simulation");
+    SetTargetFPS(MAX_FRAMERATE);
 
     // World + movement systems
     static WorldManager world;
@@ -53,9 +55,14 @@ int main() {
 
     IMovement *movement_ptr = &sand_movement;
 
+    // Add these near your brush_size variables
+    bool FRAME_CLICK = false;
+    bool step_once   = false; // Trigger for a single frame update
+                              //
     int         brush_size   = BRUSH_SIZE;
     ElementType brush_type   = ElementType::Sand;
     MatterState matter_state = MatterState::Solid;
+    Physics     physics_type = Physics::Empty;
 
     // ---------------------------
     // Camera setup
@@ -72,7 +79,17 @@ int main() {
     const float zoom_max      = 12.0f;
 
     while (!WindowShouldClose()) {
+        // --- Frame Stepping Logic ---
+        // Press 'P' to toggle between Real-time and Frame-by-Frame mode
+        if (IsKeyPressed(KEY_P)) {
+            FRAME_CLICK = !FRAME_CLICK;
+        }
 
+        // Press 'F' to trigger exactly one frame update when in Frame-by-Frame
+        // mode
+        if (FRAME_CLICK && IsKeyPressed(KEY_F)) {
+            step_once = true;
+        }
         const bool shiftDown =
             IsKeyDown(KEY_LEFT_SHIFT) || IsKeyDown(KEY_RIGHT_SHIFT);
 
@@ -138,42 +155,50 @@ int main() {
         if (IsKeyPressed(KEY_ONE)) {
             brush_type   = ElementType::Sand;
             matter_state = MatterState::Solid;
+            physics_type = Physics::Sand;
             movement_ptr = &sand_movement;
         }
         if (IsKeyPressed(KEY_TWO)) {
             brush_type   = ElementType::Water;
             matter_state = MatterState::Liquid;
+            physics_type = Physics::Water;
             movement_ptr = &liquid_movement;
         }
         if (IsKeyPressed(KEY_THREE)) {
             brush_type   = ElementType::Stone;
             matter_state = MatterState::Solid;
+            physics_type = Physics::Stone;
             movement_ptr = &solid_movement;
         }
         if (IsKeyPressed(KEY_FOUR)) {
             brush_type   = ElementType::Gas;
             matter_state = MatterState::Gas;
+            physics_type = Physics::Gas;
             movement_ptr = &gas_movement;
         }
         if (IsKeyPressed(KEY_FIVE)) {
             brush_type   = ElementType::Custom;
             matter_state = MatterState::None;
+            physics_type = Physics::Empty;
             movement_ptr = &empty_movement;
         }
         if (IsKeyPressed(KEY_SIX)) {
             brush_type   = ElementType::Bedrock;
             matter_state = MatterState::Solid;
+            physics_type = Physics::Empty;
             movement_ptr = &empty_movement;
         }
         if (IsKeyPressed(KEY_SEVEN)) {
             brush_type   = ElementType::Empty;
             matter_state = MatterState::None;
+            physics_type = Physics::Empty;
             movement_ptr = &empty_movement;
         }
 
         if (IsKeyPressed(KEY_EIGHT)) {
             brush_type   = ElementType::Scaffolding;
             matter_state = MatterState::ForeGround;
+            physics_type = Physics::Scaffolding;
             movement_ptr = &scaffolding_movement;
         }
         // ---------------------------
@@ -206,11 +231,13 @@ int main() {
                                 erase ? &empty_movement : movement_ptr;
                             MatterState matterstate =
                                 erase ? MatterState::None : matter_state;
+                            Physics physics_type_to_set =
+                                erase ? Physics::Empty : physics_type;
 
                             world.chunk_at(cx, cy).set_element_local(
                                 lx, ly,
                                 Element(matterstate, type_to_set, move_ptr,
-                                        Physics::Sand));
+                                        physics_type_to_set));
                         }
                     }
                 }
@@ -220,7 +247,10 @@ int main() {
         // ---------------------------
         // Step world
         // ---------------------------
-        world.step();
+        if (!FRAME_CLICK || step_once) {
+            world.step();
+            step_once = false; // Reset the trigger after the step is performed
+        }
 
         // ---------------------------
         // Rendering

@@ -107,7 +107,7 @@ class ScaffoldingMovement : public IMovement {
         }
 
         // 5. Falling logic
-        if (below.is_empty()) {
+        if (self.physics.density > below.physics.density) {
             return {x, y, x, y + 1, 0, 0, MoveType::Swap};
         }
 
