@@ -24,4 +24,5 @@ class Element {
 
     // Returns a reference to a static empty element
     static Element &Empty();
+    static Element &OutOfBounds();
 };

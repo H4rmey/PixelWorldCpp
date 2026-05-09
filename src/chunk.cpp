@@ -12,6 +12,53 @@ void Chunk::fill_with_empty() {
     }
 }
 
+// ---------------------------------------------------------
+// Neighbor Activation Logic
+// ---------------------------------------------------------
+
+void Chunk::activate_cardinal_neighbors() {
+    if (!m_world)
+        return;
+
+    int cx = m_world_pos_x;
+    int cy = m_world_pos_y;
+
+    // Helper to safely activate if within world grid bounds
+    auto try_activate = [&](int nx, int ny) {
+        if (nx >= 0 && nx < CHUNK_COUNT_X && ny >= 0 && ny < CHUNK_COUNT_Y) {
+            m_world->activate_chunk(m_world->chunk_at(nx, ny));
+        }
+    };
+
+    try_activate(cx - 1, cy); // Left
+    try_activate(cx + 1, cy); // Right
+    try_activate(cx, cy - 1); // Up
+    try_activate(cx, cy + 1); // Down
+}
+
+void Chunk::activate_all_neighbors() {
+    if (!m_world)
+        return;
+
+    int cx = m_world_pos_x;
+    int cy = m_world_pos_y;
+
+    for (int dy = -1; dy <= 1; ++dy) {
+        for (int dx = -1; dx <= 1; ++dx) {
+            if (dx == 0 && dy == 0)
+                continue; // Skip self
+
+            int nx = cx + dx;
+            int ny = cy + dy;
+
+            if (nx >= 0 && nx < CHUNK_COUNT_X && ny >= 0 &&
+                ny < CHUNK_COUNT_Y) {
+                m_world->activate_chunk(m_world->chunk_at(nx, ny));
+            }
+        }
+    }
+}
+
 void Chunk::set_element_local(int x, int y, const Element &e) {
     m_elements[index(x, y)] = e;
     m_world->activate_chunk(*this);
@@ -91,7 +138,7 @@ Element &Chunk::get_element_local(int x, int y) {
 Element &Chunk::get_element_global(int global_x, int global_y) {
     if (global_x < 0 || global_y < 0 || global_x >= WORLD_SIZE_X ||
         global_y >= WORLD_SIZE_Y) {
-        return Element::Empty();
+        return Element::OutOfBounds();
     }
     // Convert global → local
     int local_x = global_x - m_world_pos_x * m_width;

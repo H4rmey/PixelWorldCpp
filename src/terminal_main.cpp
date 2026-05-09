@@ -24,6 +24,8 @@ Color element_to_color(ElementType type) {
         return BLACK;
     case ElementType::Custom:
         return PURPLE;
+    case ElementType::Scaffolding:
+        return BROWN;
     default:
         return WHITE;
     }
@@ -46,8 +48,8 @@ int main() {
     SolidMovement       solid_movement;
     GasMovement         gas_movement;
     LiquidMovement      liquid_movement;
-    PowderMovement      powder_movement;
     EmptyMovement       empty_movement;
+    ScaffoldingMovement scaffolding_movement;
 
     IMovement *movement_ptr = &sand_movement;
 
@@ -169,6 +171,11 @@ int main() {
             movement_ptr = &empty_movement;
         }
 
+        if (IsKeyPressed(KEY_EIGHT)) {
+            brush_type   = ElementType::Scaffolding;
+            matter_state = MatterState::ForeGround;
+            movement_ptr = &scaffolding_movement;
+        }
         // ---------------------------
         // Mouse input (world space)
         // ---------------------------

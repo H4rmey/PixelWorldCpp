@@ -79,25 +79,32 @@ class Chunk {
 
     void fill_with_empty();
 
-    inline const Rect    &get_dirty_rect() const { return m_dirty_rect; }
-    inline static int     index(int x, int y) { return m_width * y + x; }
-    inline Element       &at(int x, int y) { return m_elements[index(x, y)]; }
-    inline const Element &at(int x, int y) const {
-        return m_elements[index(x, y)];
+    void activate_cardinal_neighbors();
+    void activate_all_neighbors();
+
+    inline const Rect &get_dirty_rect() const { return m_dirty_rect; }
+    inline static int  index(int local_x, int local_y) {
+        return m_width * local_y + local_x;
+    }
+    inline Element &at(int local_x, int local_y) {
+        return m_elements[index(local_x, local_y)];
+    }
+    inline const Element &at(int local_x, int local_y) const {
+        return m_elements[index(local_x, local_y)];
     }
     inline const int &get_world_pos_x() const { return m_world_pos_x; }
     inline const int &get_world_pos_y() const { return m_world_pos_y; }
 
-    void set_element_local(int x, int y, const Element &e);
+    void set_element_local(int local_x, int local_y, const Element &e);
 
-    inline void mark_dirty(int x, int y) {
+    inline void mark_dirty(int local_x, int local_y) {
         if (!m_dirty_rect.is_valid()) {
-            m_dirty_rect = {x, y, x, y};
+            m_dirty_rect = {local_x, local_y, local_x, local_y};
         } else {
-            m_dirty_rect.min_x = std::min(m_dirty_rect.min_x, x);
-            m_dirty_rect.min_y = std::min(m_dirty_rect.min_y, y);
-            m_dirty_rect.max_x = std::max(m_dirty_rect.max_x, x);
-            m_dirty_rect.max_y = std::max(m_dirty_rect.max_y, y);
+            m_dirty_rect.min_x = std::min(m_dirty_rect.min_x, local_x);
+            m_dirty_rect.min_y = std::min(m_dirty_rect.min_y, local_y);
+            m_dirty_rect.max_x = std::max(m_dirty_rect.max_x, local_x);
+            m_dirty_rect.max_y = std::max(m_dirty_rect.max_y, local_y);
         }
     }
     inline void clear_dirty() {
@@ -114,8 +121,8 @@ class Chunk {
 
     inline const Rect &get_dirty_rect_local() const { return m_dirty_rect; }
 
-    Element &get_element_global(int x, int y);
-    Element &get_element_local(int x, int y);
+    Element &get_element_global(int local_x, int local_y);
+    Element &get_element_local(int local_x, int local_y);
 
     void get_global_coords(int local_x, int local_y, int &out_global_x,
                            int &out_global_y) const;
