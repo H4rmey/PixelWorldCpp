@@ -73,12 +73,6 @@ class SandMovement : public IMovement {
             return MoveDecision::Stay(x, y);
         }
 
-        // element must be sand
-        if (self.type != ElementType::Sand) {
-            // kill momentum
-            return MoveDecision::Stay(x, y);
-        }
-
         auto canSwap = [&](int nx, int ny) -> bool {
             Element &t = chunk.get_element_local(nx, ny);
             if (t.is_empty()) {

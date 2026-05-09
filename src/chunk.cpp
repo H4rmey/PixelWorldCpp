@@ -7,7 +7,8 @@
 
 void Chunk::fill_with_empty() {
     for (Element &e : m_elements) {
-        e = Element(ElementType::Empty, &empty_movement, Physics::Empty);
+        e = Element(MatterState::None, ElementType::Empty, &empty_movement,
+                    Physics::Empty);
     }
 }
 

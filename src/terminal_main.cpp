@@ -1,5 +1,6 @@
 #include "helpers/constants.h"
 #include "helpers/element_type.h"
+#include "helpers/matter_state.h"
 #include "movement/IMovement.h"
 #include "movement_systems.hpp"
 #include "world_manager.hpp"
@@ -50,8 +51,9 @@ int main() {
 
     IMovement *movement_ptr = &sand_movement;
 
-    int         brush_size = BRUSH_SIZE;
-    ElementType brush_type = ElementType::Sand;
+    int         brush_size   = BRUSH_SIZE;
+    ElementType brush_type   = ElementType::Sand;
+    MatterState matter_state = MatterState::Solid;
 
     // ---------------------------
     // Camera setup
@@ -133,30 +135,37 @@ int main() {
         // ---------------------------
         if (IsKeyPressed(KEY_ONE)) {
             brush_type   = ElementType::Sand;
+            matter_state = MatterState::Solid;
             movement_ptr = &sand_movement;
         }
         if (IsKeyPressed(KEY_TWO)) {
             brush_type   = ElementType::Water;
+            matter_state = MatterState::Liquid;
             movement_ptr = &liquid_movement;
         }
         if (IsKeyPressed(KEY_THREE)) {
             brush_type   = ElementType::Stone;
+            matter_state = MatterState::Solid;
             movement_ptr = &solid_movement;
         }
         if (IsKeyPressed(KEY_FOUR)) {
             brush_type   = ElementType::Gas;
+            matter_state = MatterState::Gas;
             movement_ptr = &gas_movement;
         }
         if (IsKeyPressed(KEY_FIVE)) {
             brush_type   = ElementType::Custom;
+            matter_state = MatterState::None;
             movement_ptr = &empty_movement;
         }
         if (IsKeyPressed(KEY_SIX)) {
             brush_type   = ElementType::Bedrock;
+            matter_state = MatterState::Solid;
             movement_ptr = &empty_movement;
         }
         if (IsKeyPressed(KEY_SEVEN)) {
             brush_type   = ElementType::Empty;
+            matter_state = MatterState::None;
             movement_ptr = &empty_movement;
         }
 
@@ -188,10 +197,13 @@ int main() {
                                 erase ? ElementType::Empty : brush_type;
                             IMovement *move_ptr =
                                 erase ? &empty_movement : movement_ptr;
+                            MatterState matterstate =
+                                erase ? MatterState::None : matter_state;
 
                             world.chunk_at(cx, cy).set_element_local(
                                 lx, ly,
-                                Element(type_to_set, move_ptr, Physics::Sand));
+                                Element(matterstate, type_to_set, move_ptr,
+                                        Physics::Sand));
                         }
                     }
                 }
