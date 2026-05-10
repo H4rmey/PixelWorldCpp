@@ -126,8 +126,8 @@ void WorldManager::step() {
     m_cross.clear();
 
     for (size_t i = 0; i < active_count; ++i) {
-        Chunk                           *c         = m_active_chunks[i];
-        const std::vector<MoveDecision> &decisions = *m_decision_ptrs[i];
+        Chunk                     *c         = m_active_chunks[i];
+        std::vector<MoveDecision> &decisions = *m_decision_ptrs[i];
 
         std::vector<MoveDecision> outside = c->apply_decisions(decisions);
 

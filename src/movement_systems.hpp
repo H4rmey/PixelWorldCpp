@@ -91,8 +91,6 @@ class ScaffoldingMovement : public IMovement {
 
         // 3. Check if landing on stable scaffolding
         if (below.type == ElementType::Scaffolding) {
-            // In C#, IsVerticalStable is true if the pixel below is an anchor
-            // or stable
             if (below.physics.is_v_anchor || below.physics.is_h_anchor) {
                 self.physics.is_v_anchor = true;
                 return MoveDecision::Stay(x, y);
@@ -117,17 +115,6 @@ class ScaffoldingMovement : public IMovement {
     }
 
   private:
-    // void activate_neighbor_chunks(int x, int y, Chunk &chunk) const {
-    //     if (x == 0)
-    //         chunk.activate_neighbor(-1, 0);
-    //     if (x == chunk.width() - 1)
-    //         chunk.activate_neighbor(1, 0);
-    //     if (y == 0)
-    //         chunk.activate_neighbor(0, -1);
-    //     if (y == chunk.height() - 1)
-    //         chunk.activate_neighbor(0, 1);
-    // }
-
     bool check_horizontal_stability(int gx, int gy, int dir,
                                     Chunk &chunk) const {
         for (int i = 1; i <= MAX_HORIZONTAL_CHAIN; ++i) {
@@ -316,7 +303,7 @@ class LiquidMovement : public IMovement {
 
         // --- 1. Downward Check ---
         Element &below = chunk.get_element_global(gx, gy + 1);
-        if (below.is_empty() || (density(self.type) > density(below.type))) {
+        if (below.is_empty() || self.physics.density > below.physics.density) {
             self.physics.terminal_velocity_y++;
             return {x, y, x, y + 1, 0, 0, MoveType::Swap};
         }
@@ -369,21 +356,11 @@ class LiquidMovement : public IMovement {
 
             // Path is blocked
             if (!target.is_empty()) {
-                // If we hit another liquid of same type, we can't move through
-                // it unless we want to simulate displacement (complex).
                 break;
             }
 
             // Path is empty!
             last_valid_gx = target_gx;
-
-            // CHECK BELOW: This is the "Waterfall" check.
-            // If there is a hole right here, STOP scanning and take it.
-            Element &below_target = chunk.get_element_global(target_gx, gy + 1);
-            if (below_target.is_empty() ||
-                (density(below_target.type) < 0.5f)) {
-                return target_gx;
-            }
         }
 
         // If we are here, we found a flat path.

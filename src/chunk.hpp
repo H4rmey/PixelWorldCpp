@@ -129,5 +129,5 @@ class Chunk {
 
     std::vector<MoveDecision> &process_movement(bool bias);
     std::vector<MoveDecision>
-    apply_decisions(const std::vector<MoveDecision> &decisions);
+    apply_decisions(std::vector<MoveDecision> &decisions);
 };

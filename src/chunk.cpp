@@ -3,6 +3,7 @@
 #include "movement/IMovement.h"
 #include "world_manager.hpp"
 #include <iostream>
+#include <random>
 #include <raylib.h>
 
 void Chunk::fill_with_empty() {
@@ -205,7 +206,15 @@ std::vector<MoveDecision> &Chunk::process_movement(bool bias) {
 }
 
 std::vector<MoveDecision>
-Chunk::apply_decisions(const std::vector<MoveDecision> &decisions) {
+Chunk::apply_decisions(std::vector<MoveDecision> &decisions) {
+    // 1. Initialize the random engine
+    static std::random_device rd;
+    static std::mt19937       g(rd());
+
+    // 2. Shuffle the input vector directly
+    std::shuffle(decisions.begin(), decisions.end(), g);
+
+    // 3. Prepare the return vector
     std::vector<MoveDecision> out_of_bounds;
     out_of_bounds.reserve(decisions.size() / 8);
 
