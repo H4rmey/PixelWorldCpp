@@ -2,12 +2,13 @@
 #include "helpers/constants.h"
 #include "movement/IMovement.h"
 #include "world_manager.hpp"
-#include <iostream>
 #include <random>
 #include <raylib.h>
 
-void Chunk::fill_with_empty() {
-    for (Element &e : m_elements) {
+void Chunk::fill_with_empty()
+{
+    for (Element &e : m_elements)
+    {
         e = Element(MatterState::None, ElementType::Empty, &empty_movement,
                     Physics::Empty);
     }
@@ -17,7 +18,8 @@ void Chunk::fill_with_empty() {
 // Neighbor Activation Logic
 // ---------------------------------------------------------
 
-void Chunk::activate_cardinal_neighbors() {
+void Chunk::activate_cardinal_neighbors()
+{
     if (!m_world)
         return;
 
@@ -25,8 +27,10 @@ void Chunk::activate_cardinal_neighbors() {
     int cy = m_world_pos_y;
 
     // Helper to safely activate if within world grid bounds
-    auto try_activate = [&](int nx, int ny) {
-        if (nx >= 0 && nx < CHUNK_COUNT_X && ny >= 0 && ny < CHUNK_COUNT_Y) {
+    auto try_activate = [&](int nx, int ny)
+    {
+        if (nx >= 0 && nx < CHUNK_COUNT_X && ny >= 0 && ny < CHUNK_COUNT_Y)
+        {
             m_world->activate_chunk(m_world->chunk_at(nx, ny));
         }
     };
@@ -37,37 +41,42 @@ void Chunk::activate_cardinal_neighbors() {
     try_activate(cx, cy + 1); // Down
 }
 
-void Chunk::activate_all_neighbors() {
+void Chunk::activate_all_neighbors()
+{
     if (!m_world)
         return;
 
     int cx = m_world_pos_x;
     int cy = m_world_pos_y;
 
-    for (int dy = -1; dy <= 1; ++dy) {
-        for (int dx = -1; dx <= 1; ++dx) {
+    for (int dy = -1; dy <= 1; ++dy)
+    {
+        for (int dx = -1; dx <= 1; ++dx)
+        {
             if (dx == 0 && dy == 0)
                 continue; // Skip self
 
             int nx = cx + dx;
             int ny = cy + dy;
 
-            if (nx >= 0 && nx < CHUNK_COUNT_X && ny >= 0 &&
-                ny < CHUNK_COUNT_Y) {
+            if (nx >= 0 && nx < CHUNK_COUNT_X && ny >= 0 && ny < CHUNK_COUNT_Y)
+            {
                 m_world->activate_chunk(m_world->chunk_at(nx, ny));
             }
         }
     }
 }
 
-void Chunk::set_element_local(int x, int y, const Element &e) {
+void Chunk::set_element_local(int x, int y, const Element &e)
+{
     m_elements[index(x, y)] = e;
     m_world->activate_chunk(*this);
 
     int cx = m_world_pos_x;
     int cy = m_world_pos_y;
 
-    if (x == 0 || x == m_width - 1 || y == 0 || y == m_height - 1) {
+    if (x == 0 || x == m_width - 1 || y == 0 || y == m_height - 1)
+    {
         if (cx > 0)
             m_world->activate_chunk(m_world->chunk_at(cx - 1, cy));
         if (cx < CHUNK_COUNT_X - 1)
@@ -79,28 +88,32 @@ void Chunk::set_element_local(int x, int y, const Element &e) {
     }
 
     // Left border affects left neighbor's right border
-    if (x == 0 && cx > 0) {
+    if (x == 0 && cx > 0)
+    {
         Chunk &left = m_world->chunk_at(cx - 1, cy);
         m_world->activate_chunk(left);
         left.mark_dirty(Chunk::m_width - 1, y);
     }
 
     // Right border affects right neighbor's left border
-    if (x == m_width - 1 && cx < CHUNK_COUNT_X - 1) {
+    if (x == m_width - 1 && cx < CHUNK_COUNT_X - 1)
+    {
         Chunk &right = m_world->chunk_at(cx + 1, cy);
         m_world->activate_chunk(right);
         right.mark_dirty(0, y);
     }
 
     // Top border affects upper neighbor's bottom border
-    if (y == 0 && cy > 0) {
+    if (y == 0 && cy > 0)
+    {
         Chunk &up = m_world->chunk_at(cx, cy - 1);
         m_world->activate_chunk(up);
         up.mark_dirty(x, Chunk::m_height - 1);
     }
 
     // Bottom border affects lower neighbor's top border
-    if (y == m_height - 1 && cy < CHUNK_COUNT_Y - 1) {
+    if (y == m_height - 1 && cy < CHUNK_COUNT_Y - 1)
+    {
         Chunk &down = m_world->chunk_at(cx, cy + 1);
         m_world->activate_chunk(down);
         down.mark_dirty(x, 0);
@@ -111,14 +124,17 @@ void Chunk::set_element_local(int x, int y, const Element &e) {
 
 // Returns the global coordinate of a specific local tile
 void Chunk::get_global_coords(int local_x, int local_y, int &out_global_x,
-                              int &out_global_y) const {
+                              int &out_global_y) const
+{
     out_global_x = m_world_pos_x * m_width + local_x;
     out_global_y = m_world_pos_y * m_height + local_y;
 }
 
-Element &Chunk::get_element_local(int x, int y) {
+Element &Chunk::get_element_local(int x, int y)
+{
     // Fast path (very common case)
-    if ((unsigned)x < m_width && (unsigned)y < m_height) {
+    if ((unsigned)x < m_width && (unsigned)y < m_height)
+    {
         return m_elements[y * m_width + x];
     }
 
@@ -136,9 +152,11 @@ Element &Chunk::get_element_local(int x, int y) {
     return neighbor.m_elements[local_y * m_width + local_x];
 }
 
-Element &Chunk::get_element_global(int global_x, int global_y) {
+Element &Chunk::get_element_global(int global_x, int global_y)
+{
     if (global_x < 0 || global_y < 0 || global_x >= WORLD_SIZE_X ||
-        global_y >= WORLD_SIZE_Y) {
+        global_y >= WORLD_SIZE_Y)
+    {
         return Element::OutOfBounds();
     }
     // Convert global → local
@@ -146,8 +164,8 @@ Element &Chunk::get_element_global(int global_x, int global_y) {
     int local_y = global_y - m_world_pos_y * m_height;
 
     // If inside this chunk, return directly
-    if (local_x >= 0 && local_x < m_width && local_y >= 0 &&
-        local_y < m_height) {
+    if (local_x >= 0 && local_x < m_width && local_y >= 0 && local_y < m_height)
+    {
         return m_elements[local_y * m_width + local_x];
     }
 
@@ -162,38 +180,47 @@ Element &Chunk::get_element_global(int global_x, int global_y) {
     return neighbor.get_element_global(global_x, global_y);
 }
 
-std::vector<MoveDecision> &Chunk::process_movement(bool bias) {
+std::vector<MoveDecision> &Chunk::process_movement(uint8_t tick, bool bias)
+{
     m_decisions.clear();
 
     // for (int y = 0; y < m_height; ++y) {
     //     for (int x = 0; x < m_width; ++x) {
     //
-    for (int y = m_dirty_rect.max_y + 3; y >= m_dirty_rect.min_y - 3; --y) {
-        if (bias) {
+    for (int y = m_dirty_rect.max_y + 3; y >= m_dirty_rect.min_y - 3; --y)
+    {
+        if (bias)
+        {
             for (int x = m_dirty_rect.max_x + 3; x >= m_dirty_rect.min_x - 3;
-                 --x) {
+                 --x)
+            {
                 if (y < 0 || x < 0 || x >= CHUNK_SIZE_X || y >= CHUNK_SIZE_Y)
                     continue;
 
-                MoveDecision d =
-                    m_elements[index(x, y)].movement->process(x, y, *this);
+                MoveDecision d = m_elements[index(x, y)].movement->process(
+                    tick, x, y, *this);
 
-                if (d.move_type != MoveType::Stay) {
+                if (d.move_type != MoveType::Stay)
+                {
                     d.origin_cx = m_world_pos_x;
                     d.origin_cy = m_world_pos_y;
                     m_decisions.push_back(d);
                 }
             }
-        } else {
+        }
+        else
+        {
             for (int x = m_dirty_rect.min_x - 3; x <= m_dirty_rect.max_x + 3;
-                 ++x) {
+                 ++x)
+            {
                 if (y < 0 || x < 0 || x >= CHUNK_SIZE_X || y >= CHUNK_SIZE_Y)
                     continue;
 
-                MoveDecision d =
-                    m_elements[index(x, y)].movement->process(x, y, *this);
+                MoveDecision d = m_elements[index(x, y)].movement->process(
+                    tick, x, y, *this);
 
-                if (d.move_type != MoveType::Stay) {
+                if (d.move_type != MoveType::Stay)
+                {
                     d.origin_cx = m_world_pos_x;
                     d.origin_cy = m_world_pos_y;
                     m_decisions.push_back(d);
@@ -206,7 +233,8 @@ std::vector<MoveDecision> &Chunk::process_movement(bool bias) {
 }
 
 std::vector<MoveDecision>
-Chunk::apply_decisions(std::vector<MoveDecision> &decisions) {
+Chunk::apply_decisions(std::vector<MoveDecision> &decisions)
+{
     // 1. Initialize the random engine
     static std::random_device rd;
     static std::mt19937       g(rd());
@@ -222,33 +250,38 @@ Chunk::apply_decisions(std::vector<MoveDecision> &decisions) {
     used.assign(m_width * m_height, 0);
 
     // ---- helper to wake neighbor if a BORDER cell changed ----
-    auto notify_border_change = [&](int x, int y) {
+    auto notify_border_change = [&](int x, int y)
+    {
         const int cx = m_world_pos_x;
         const int cy = m_world_pos_y;
 
         // Left edge changed -> left neighbor needs its right edge dirty
-        if (x == 0 && cx > 0) {
+        if (x == 0 && cx > 0)
+        {
             Chunk &n = m_world->chunk_at(cx - 1, cy);
             m_world->activate_chunk(n);
             n.mark_dirty(Chunk::m_width - 1, y);
         }
 
         // Right edge changed -> right neighbor needs its left edge dirty
-        if (x == m_width - 1 && cx < CHUNK_COUNT_X - 1) {
+        if (x == m_width - 1 && cx < CHUNK_COUNT_X - 1)
+        {
             Chunk &n = m_world->chunk_at(cx + 1, cy);
             m_world->activate_chunk(n);
             n.mark_dirty(0, y);
         }
 
         // Top edge changed -> upper neighbor needs its bottom edge dirty
-        if (y == 0 && cy > 0) {
+        if (y == 0 && cy > 0)
+        {
             Chunk &n = m_world->chunk_at(cx, cy - 1);
             m_world->activate_chunk(n);
             n.mark_dirty(x, Chunk::m_height - 1);
         }
 
         // Bottom edge changed -> lower neighbor needs its top edge dirty
-        if (y == m_height - 1 && cy < CHUNK_COUNT_Y - 1) {
+        if (y == m_height - 1 && cy < CHUNK_COUNT_Y - 1)
+        {
             Chunk &n = m_world->chunk_at(cx, cy + 1);
             m_world->activate_chunk(n);
             n.mark_dirty(x, 0);
@@ -256,8 +289,10 @@ Chunk::apply_decisions(std::vector<MoveDecision> &decisions) {
     };
     // ------------------------------------------------------------
 
-    for (const MoveDecision &d : decisions) {
-        if (d.move_type != MoveType::Swap)
+    for (const MoveDecision &d : decisions)
+    {
+        if (d.move_type != MoveType::Swap &&
+            d.move_type != MoveType::Processing)
             continue;
 
         const bool old_in = (unsigned)d.old_x < (unsigned)m_width &&
@@ -265,7 +300,8 @@ Chunk::apply_decisions(std::vector<MoveDecision> &decisions) {
         const bool new_in = (unsigned)d.new_x < (unsigned)m_width &&
                             (unsigned)d.new_y < (unsigned)m_height;
 
-        if (!old_in || !new_in) {
+        if (!old_in || !new_in)
+        {
             out_of_bounds.push_back(d);
             continue;
         }
@@ -273,7 +309,8 @@ Chunk::apply_decisions(std::vector<MoveDecision> &decisions) {
         const uint16_t oi = (uint16_t)index(d.old_x, d.old_y);
         const uint16_t ni = (uint16_t)index(d.new_x, d.new_y);
 
-        if (used[oi] || used[ni]) {
+        if (used[oi] || used[ni])
+        {
             continue;
         }
 

@@ -4,23 +4,28 @@
 #include "helpers/tools.h"
 #include <vector>
 
-Chunk &WorldManager::chunk_at(int x, int y) {
-    if (x < 0 || x >= CHUNK_COUNT_X || y < 0 || y >= CHUNK_COUNT_Y) {
+Chunk &WorldManager::chunk_at(int x, int y)
+{
+    if (x < 0 || x >= CHUNK_COUNT_X || y < 0 || y >= CHUNK_COUNT_Y)
+    {
         return m_bedrock_chunk;
     }
 
     return m_chunks[y * CHUNK_COUNT_X + x];
 }
 
-const Chunk &WorldManager::chunk_at(int x, int y) const {
-    if (x < 0 || x >= CHUNK_COUNT_X || y < 0 || y >= CHUNK_COUNT_Y) {
+const Chunk &WorldManager::chunk_at(int x, int y) const
+{
+    if (x < 0 || x >= CHUNK_COUNT_X || y < 0 || y >= CHUNK_COUNT_Y)
+    {
         return m_bedrock_chunk;
     }
 
     return m_chunks[y * CHUNK_COUNT_X + x];
 }
 
-void WorldManager::activate_chunk(Chunk &c) {
+void WorldManager::activate_chunk(Chunk &c)
+{
     if (c.active_index != UINT32_MAX)
         return; // already active
 
@@ -28,7 +33,8 @@ void WorldManager::activate_chunk(Chunk &c) {
     m_active_chunks.push_back(&c);
 }
 
-void WorldManager::deactivate_chunk(Chunk &c) {
+void WorldManager::deactivate_chunk(Chunk &c)
+{
     uint32_t idx = c.active_index;
     if (idx == UINT32_MAX)
         return; // not active
@@ -41,7 +47,8 @@ void WorldManager::deactivate_chunk(Chunk &c) {
     c.active_index = UINT32_MAX;
 }
 
-Element &WorldManager::get_element_global(int x, int y) {
+Element &WorldManager::get_element_global(int x, int y)
+{
     // Determine which chunk the global coordinate belongs to
     int chunk_x = x / CHUNK_SIZE_X;
     int chunk_y = y / CHUNK_SIZE_Y;
@@ -58,7 +65,8 @@ Element &WorldManager::get_element_global(int x, int y) {
 
     // Bounds check
     if (chunk_x < 0 || chunk_x >= CHUNK_COUNT_X || chunk_y < 0 ||
-        chunk_y >= CHUNK_COUNT_Y) {
+        chunk_y >= CHUNK_COUNT_Y)
+    {
         throw std::out_of_range("Global coordinates out of world bounds");
     }
 
@@ -71,7 +79,8 @@ Element &WorldManager::get_element_global(int x, int y) {
 
 bool WorldManager::get_chunk_for_global_cell(int gx, int gy, int &out_x,
                                              int &out_y, int &out_lx,
-                                             int &out_ly) const {
+                                             int &out_ly) const
+{
     if (gx < 0 || gy < 0)
         return false;
 
@@ -90,10 +99,14 @@ bool WorldManager::get_chunk_for_global_cell(int gx, int gy, int &out_x,
     return true;
 }
 
-void WorldManager::step() {
+void WorldManager::step()
+{
+    if (tick >= GRAVITY)
+    {
+        tick = 0;
+    }
     // Freeze the active set for this tick.
     // Cross-chunk swaps may activate additional chunks; those will run next
-    // tick.
     const size_t active_count = m_active_chunks.size();
     if (active_count == 0)
         return;
@@ -109,10 +122,12 @@ void WorldManager::step() {
     had_decisions.assign(active_count, 0);
 
     //  collect decisions (NO WRITES)
-    for (size_t i = 0; i < active_count; ++i) {
+    for (size_t i = 0; i < active_count; ++i)
+    {
         Chunk *c = m_active_chunks[i];
 
-        std::vector<MoveDecision> &decisions = c->process_movement(m_bias);
+        std::vector<MoveDecision> &decisions =
+            c->process_movement(tick, m_bias);
         m_decision_ptrs.push_back(&decisions);
 
         had_decisions[i] = static_cast<uint8_t>(!decisions.empty());
@@ -125,7 +140,8 @@ void WorldManager::step() {
     //  apply in-chunk decisions
     m_cross.clear();
 
-    for (size_t i = 0; i < active_count; ++i) {
+    for (size_t i = 0; i < active_count; ++i)
+    {
         Chunk                     *c         = m_active_chunks[i];
         std::vector<MoveDecision> &decisions = *m_decision_ptrs[i];
 
@@ -141,7 +157,8 @@ void WorldManager::step() {
         apply_cross_chunk_swaps(m_cross);
 
     //  deactivate stable chunks from the frozen set only
-    for (size_t i = 0; i < active_count; ++i) {
+    for (size_t i = 0; i < active_count; ++i)
+    {
         Chunk *c = m_active_chunks[i];
 
         // Deactivate only if:
@@ -151,17 +168,20 @@ void WorldManager::step() {
             m_chunks_to_deactivate.push_back(c);
     }
 
-    for (Chunk *c : m_chunks_to_deactivate) {
+    for (Chunk *c : m_chunks_to_deactivate)
+    {
         deactivate_chunk(*c);
 
         // IMPORTANT: do NOT clear dirty here.
         // Dirty should represent "needs work next tick".
     }
     m_bias = !m_bias;
+    tick++;
 }
 
 void WorldManager::apply_cross_chunk_swaps(
-    const std::vector<MoveDecision> &cross) {
+    const std::vector<MoveDecision> &cross)
+{
     constexpr int W               = Chunk::m_width;
     constexpr int H               = Chunk::m_height;
     const int     cells_per_chunk = W * H;
@@ -170,12 +190,13 @@ void WorldManager::apply_cross_chunk_swaps(
     static std::vector<uint8_t> used;
     used.assign(CHUNK_COUNT_X * CHUNK_COUNT_Y * cells_per_chunk, 0);
 
-    auto used_for = [&](int cx, int cy) -> uint8_t * {
-        return used.data() + (cy * CHUNK_COUNT_X + cx) * cells_per_chunk;
-    };
+    auto used_for = [&](int cx, int cy) -> uint8_t *
+    { return used.data() + (cy * CHUNK_COUNT_X + cx) * cells_per_chunk; };
 
-    for (const MoveDecision &d : cross) {
-        if (d.move_type != MoveType::Swap)
+    for (const MoveDecision &d : cross)
+    {
+        if (d.move_type != MoveType::Swap &&
+            d.move_type != MoveType::Processing)
             continue;
 
         //  Convert local coords (possibly negative/oob) to GLOBAL
@@ -198,7 +219,8 @@ void WorldManager::apply_cross_chunk_swaps(
         if ((unsigned)old_cx >= (unsigned)CHUNK_COUNT_X ||
             (unsigned)old_cy >= (unsigned)CHUNK_COUNT_Y ||
             (unsigned)new_cx >= (unsigned)CHUNK_COUNT_X ||
-            (unsigned)new_cy >= (unsigned)CHUNK_COUNT_Y) {
+            (unsigned)new_cy >= (unsigned)CHUNK_COUNT_Y)
+        {
             continue;
         }
 
@@ -214,7 +236,8 @@ void WorldManager::apply_cross_chunk_swaps(
         const int old_i = Chunk::index(old_lx, old_ly);
         const int new_i = Chunk::index(new_lx, new_ly);
 
-        if (used_old[old_i] || used_new[new_i]) {
+        if (used_old[old_i] || used_new[new_i])
+        {
             // conflict policy: skip (fastest). alternative: retry list.
             continue;
         }

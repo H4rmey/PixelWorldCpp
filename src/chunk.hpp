@@ -16,7 +16,8 @@ class WorldManager;
 // ---------------------------------------------------------
 // Neighbor directions
 // ---------------------------------------------------------
-enum class NeighborDir : uint8_t {
+enum class NeighborDir : uint8_t
+{
     Left = 0,
     Right,
     Up,
@@ -28,7 +29,8 @@ enum class NeighborDir : uint8_t {
     COUNT
 };
 
-struct Rect {
+struct Rect
+{
     int min_x = 0;
     int min_y = 0;
     int max_x = -1;
@@ -37,7 +39,8 @@ struct Rect {
     bool is_valid() const { return max_x >= min_x && max_y >= min_y; }
 };
 
-class Chunk {
+class Chunk
+{
   public:
     static constexpr int m_width  = CHUNK_SIZE_X;
     static constexpr int m_height = CHUNK_SIZE_Y;
@@ -66,7 +69,8 @@ class Chunk {
     Chunk(Chunk &&)            = default;
     Chunk &operator=(Chunk &&) = default;
 
-    void init(WorldManager *world, int x, int y) {
+    void init(WorldManager *world, int x, int y)
+    {
         m_world       = world;
         m_world_pos_x = x;
         m_world_pos_y = y;
@@ -83,13 +87,16 @@ class Chunk {
     void activate_all_neighbors();
 
     inline const Rect &get_dirty_rect() const { return m_dirty_rect; }
-    inline static int  index(int local_x, int local_y) {
+    inline static int  index(int local_x, int local_y)
+    {
         return m_width * local_y + local_x;
     }
-    inline Element &at(int local_x, int local_y) {
+    inline Element &at(int local_x, int local_y)
+    {
         return m_elements[index(local_x, local_y)];
     }
-    inline const Element &at(int local_x, int local_y) const {
+    inline const Element &at(int local_x, int local_y) const
+    {
         return m_elements[index(local_x, local_y)];
     }
     inline const int &get_world_pos_x() const { return m_world_pos_x; }
@@ -97,24 +104,30 @@ class Chunk {
 
     void set_element_local(int local_x, int local_y, const Element &e);
 
-    inline void mark_dirty(int local_x, int local_y) {
-        if (!m_dirty_rect.is_valid()) {
+    inline void mark_dirty(int local_x, int local_y)
+    {
+        if (!m_dirty_rect.is_valid())
+        {
             m_dirty_rect = {local_x, local_y, local_x, local_y};
-        } else {
+        }
+        else
+        {
             m_dirty_rect.min_x = std::min(m_dirty_rect.min_x, local_x);
             m_dirty_rect.min_y = std::min(m_dirty_rect.min_y, local_y);
             m_dirty_rect.max_x = std::max(m_dirty_rect.max_x, local_x);
             m_dirty_rect.max_y = std::max(m_dirty_rect.max_y, local_y);
         }
     }
-    inline void clear_dirty() {
+    inline void clear_dirty()
+    {
         m_dirty_rect.min_x = 0;
         m_dirty_rect.min_y = 0;
         m_dirty_rect.max_x = -1;
         m_dirty_rect.max_y = -1;
     }
 
-    inline bool is_dirty() const {
+    inline bool is_dirty() const
+    {
         return m_dirty_rect.max_x >= m_dirty_rect.min_x &&
                m_dirty_rect.max_y >= m_dirty_rect.min_y;
     }
@@ -127,7 +140,7 @@ class Chunk {
     void get_global_coords(int local_x, int local_y, int &out_global_x,
                            int &out_global_y) const;
 
-    std::vector<MoveDecision> &process_movement(bool bias);
+    std::vector<MoveDecision> &process_movement(uint8_t tick, bool bias);
     std::vector<MoveDecision>
     apply_decisions(std::vector<MoveDecision> &decisions);
 };

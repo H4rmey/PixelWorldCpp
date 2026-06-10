@@ -9,8 +9,10 @@
 #include <iostream>
 #include <raylib.h>
 
-Color element_to_color(ElementType type) {
-    switch (type) {
+Color element_to_color(ElementType type)
+{
+    switch (type)
+    {
     case ElementType::Empty:
         return GRAY;
     case ElementType::Sand:
@@ -32,7 +34,8 @@ Color element_to_color(ElementType type) {
     }
 }
 
-int main() {
+int main()
+{
     const int cellSize = CELL_SIZE;
 
     const int total_width  = CHUNK_COUNT_X * CHUNK_SIZE_X;
@@ -78,16 +81,23 @@ int main() {
     const float zoom_min      = 0.10f;
     const float zoom_max      = 12.0f;
 
-    while (!WindowShouldClose()) {
+    // Target 60 updates per second for the simulation
+    const float targetDt    = 1.0f / 60.0f;
+    float       accumulator = 0.0f;
+
+    while (!WindowShouldClose())
+    {
         // --- Frame Stepping Logic ---
         // Press 'P' to toggle between Real-time and Frame-by-Frame mode
-        if (IsKeyPressed(KEY_P)) {
+        if (IsKeyPressed(KEY_P))
+        {
             FRAME_CLICK = !FRAME_CLICK;
         }
 
         // Press 'F' to trigger exactly one frame update when in Frame-by-Frame
         // mode
-        if (FRAME_CLICK && IsKeyPressed(KEY_F)) {
+        if (FRAME_CLICK && IsKeyPressed(KEY_F))
+        {
             step_once = true;
         }
         const bool shiftDown =
@@ -96,12 +106,14 @@ int main() {
         // ---------------------------
         // Zoom (SHIFT + +/-)
         // ---------------------------
-        if (shiftDown) {
+        if (shiftDown)
+        {
             bool zoomIn = (IsKeyPressed(KEY_KP_ADD) || IsKeyPressed(KEY_EQUAL));
             bool zoomOut =
                 (IsKeyPressed(KEY_KP_SUBTRACT) || IsKeyPressed(KEY_MINUS));
 
-            if (zoomIn || zoomOut) {
+            if (zoomIn || zoomOut)
+            {
                 Vector2 mouse_screen = GetMousePosition();
                 Vector2 before       = GetScreenToWorld2D(mouse_screen, camera);
 
@@ -114,7 +126,9 @@ int main() {
                 camera.target.x += (before.x - after.x);
                 camera.target.y += (before.y - after.y);
             }
-        } else {
+        }
+        else
+        {
             // Brush size
             if (IsKeyPressed(KEY_KP_ADD) || IsKeyPressed(KEY_EQUAL))
                 brush_size = std::min(90, brush_size + 1);
@@ -126,7 +140,8 @@ int main() {
         // ---------------------------
         // Pan with SHIFT + LMB drag
         // ---------------------------
-        if (shiftDown && IsMouseButtonDown(MOUSE_LEFT_BUTTON)) {
+        if (shiftDown && IsMouseButtonDown(MOUSE_LEFT_BUTTON))
+        {
             Vector2 d = GetMouseDelta();
             camera.target.x -= d.x / camera.zoom;
             camera.target.y -= d.y / camera.zoom;
@@ -152,50 +167,58 @@ int main() {
         // ---------------------------
         // Element selection
         // ---------------------------
-        if (IsKeyPressed(KEY_ONE)) {
+        if (IsKeyPressed(KEY_ONE))
+        {
             brush_type   = ElementType::Sand;
             matter_state = MatterState::Solid;
             physics_type = Physics::Sand;
             movement_ptr = &sand_movement;
         }
-        if (IsKeyPressed(KEY_TWO)) {
+        if (IsKeyPressed(KEY_TWO))
+        {
             brush_type   = ElementType::Water;
             matter_state = MatterState::Liquid;
             physics_type = Physics::Water;
             movement_ptr = &liquid_movement;
         }
-        if (IsKeyPressed(KEY_THREE)) {
+        if (IsKeyPressed(KEY_THREE))
+        {
             brush_type   = ElementType::Stone;
             matter_state = MatterState::Solid;
             physics_type = Physics::Stone;
-            movement_ptr = &solid_movement;
+            movement_ptr = &sand_movement;
         }
-        if (IsKeyPressed(KEY_FOUR)) {
+        if (IsKeyPressed(KEY_FOUR))
+        {
             brush_type   = ElementType::Gas;
             matter_state = MatterState::Gas;
             physics_type = Physics::Gas;
             movement_ptr = &gas_movement;
         }
-        if (IsKeyPressed(KEY_FIVE)) {
+        if (IsKeyPressed(KEY_FIVE))
+        {
             brush_type   = ElementType::Custom;
             matter_state = MatterState::None;
             physics_type = Physics::Empty;
             movement_ptr = &empty_movement;
         }
-        if (IsKeyPressed(KEY_SIX)) {
+        if (IsKeyPressed(KEY_SIX))
+        {
             brush_type   = ElementType::Bedrock;
             matter_state = MatterState::Solid;
             physics_type = Physics::Empty;
             movement_ptr = &empty_movement;
         }
-        if (IsKeyPressed(KEY_SEVEN)) {
+        if (IsKeyPressed(KEY_SEVEN))
+        {
             brush_type   = ElementType::Empty;
             matter_state = MatterState::None;
             physics_type = Physics::Empty;
             movement_ptr = &empty_movement;
         }
 
-        if (IsKeyPressed(KEY_EIGHT)) {
+        if (IsKeyPressed(KEY_EIGHT))
+        {
             brush_type   = ElementType::Scaffolding;
             matter_state = MatterState::ForeGround;
             physics_type = Physics::Scaffolding;
@@ -213,18 +236,23 @@ int main() {
         bool isPanning = shiftDown && IsMouseButtonDown(MOUSE_LEFT_BUTTON);
 
         if (!isPanning && (IsMouseButtonDown(MOUSE_LEFT_BUTTON) ||
-                           IsMouseButtonDown(MOUSE_RIGHT_BUTTON))) {
+                           IsMouseButtonDown(MOUSE_RIGHT_BUTTON)))
+        {
             bool erase = IsMouseButtonDown(MOUSE_RIGHT_BUTTON);
 
-            for (int dy = -brush_size; dy <= brush_size; dy++) {
-                for (int dx = -brush_size; dx <= brush_size; dx++) {
-                    if (dx * dx + dy * dy <= brush_size * brush_size) {
+            for (int dy = -brush_size; dy <= brush_size; dy++)
+            {
+                for (int dx = -brush_size; dx <= brush_size; dx++)
+                {
+                    if (dx * dx + dy * dy <= brush_size * brush_size)
+                    {
                         int px = gx + dx;
                         int py = gy + dy;
 
                         int cx, cy, lx, ly;
                         if (world.get_chunk_for_global_cell(px, py, cx, cy, lx,
-                                                            ly)) {
+                                                            ly))
+                        {
                             ElementType type_to_set =
                                 erase ? ElementType::Empty : brush_type;
                             IMovement *move_ptr =
@@ -244,12 +272,41 @@ int main() {
             }
         }
 
+        // 1. Get the time elapsed since the last frame
+        float frameTime = GetFrameTime();
+
+        // Safety cap: prevents "spiral of death" if the simulation lags
+        if (frameTime > 0.25f)
+            frameTime = 0.25f;
+
+        accumulator += frameTime;
+
         // ---------------------------
-        // Step world
+        // Input & Camera (Runs every frame for smoothness)
         // ---------------------------
-        if (!FRAME_CLICK || step_once) {
+        // ... (Your existing KEY_P, KEY_F, and Camera logic) ...
+        // Note: Use 'frameTime' for your camera panning instead of calling
+        // GetFrameTime() again
+        float camStep = (cam_pan_speed * frameTime) / camera.zoom;
+
+        // ---------------------------
+        // Step world (Fixed Timestep)
+        // ---------------------------
+        if (!FRAME_CLICK)
+        {
+            // While we have enough time accumulated, run a physics step
+            while (accumulator >= targetDt)
+            {
+                world.step();
+                accumulator -= targetDt;
+            }
+        }
+        else if (step_once)
+        {
+            // Manual frame-by-frame still works
             world.step();
-            step_once = false; // Reset the trigger after the step is performed
+            step_once   = false;
+            accumulator = 0; // Reset accumulator to prevent catch-up jumps
         }
 
         // ---------------------------
@@ -263,8 +320,10 @@ int main() {
         // =========================================================
         // Render ONLY active chunks (but camera still sees full world)
         // =========================================================
-        for (int cy = 0; cy < CHUNK_COUNT_Y; cy++) {
-            for (int cx = 0; cx < CHUNK_COUNT_X; cx++) {
+        for (int cy = 0; cy < CHUNK_COUNT_Y; cy++)
+        {
+            for (int cx = 0; cx < CHUNK_COUNT_X; cx++)
+            {
 
                 Chunk &chunk = world.chunk_at(cx, cy);
 
@@ -281,8 +340,10 @@ int main() {
                 //}
 
                 // Active chunk → draw all its cells
-                for (int y = 0; y < CHUNK_SIZE_Y; y++) {
-                    for (int x = 0; x < CHUNK_SIZE_X; x++) {
+                for (int y = 0; y < CHUNK_SIZE_Y; y++)
+                {
+                    for (int x = 0; x < CHUNK_SIZE_X; x++)
+                    {
                         ElementType type = chunk.at(x, y).type;
                         Color       c    = element_to_color(type);
 
@@ -295,8 +356,10 @@ int main() {
         }
 
         // --- Draw chunk outlines ---
-        for (int y = 0; y < CHUNK_COUNT_Y; y++) {
-            for (int x = 0; x < CHUNK_COUNT_X; x++) {
+        for (int y = 0; y < CHUNK_COUNT_Y; y++)
+        {
+            for (int x = 0; x < CHUNK_COUNT_X; x++)
+            {
                 int posx   = x * CHUNK_SIZE_X * cellSize + 1;
                 int posy   = y * CHUNK_SIZE_Y * cellSize + 1;
                 int width  = CHUNK_SIZE_X * cellSize - 1;

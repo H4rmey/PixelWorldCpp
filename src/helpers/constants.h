@@ -7,6 +7,7 @@
 static constexpr int CHUNK_SIZE_X  = 16 * 1;
 static constexpr int CHUNK_SIZE_Y  = 16 * 1;
 static constexpr int MAX_FRAMERATE = 60;
+static constexpr int GRAVITY       = 32;
 
 #ifdef test
 static constexpr int CHUNK_COUNT_X = 8 * 8;
