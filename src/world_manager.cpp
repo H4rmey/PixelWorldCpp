@@ -27,7 +27,9 @@ const Chunk &WorldManager::chunk_at(int x, int y) const
 void WorldManager::activate_chunk(Chunk &c)
 {
     if (c.active_index != UINT32_MAX)
+    {
         return; // already active
+    }
 
     c.active_index = static_cast<uint32_t>(m_active_chunks.size());
     m_active_chunks.push_back(&c);
@@ -37,7 +39,9 @@ void WorldManager::deactivate_chunk(Chunk &c)
 {
     uint32_t idx = c.active_index;
     if (idx == UINT32_MAX)
+    {
         return; // not active
+    }
 
     Chunk *last          = m_active_chunks.back();
     m_active_chunks[idx] = last;
@@ -59,13 +63,16 @@ Element &WorldManager::get_element_global(int x, int y)
 
     // Handle negative modulo (C++ keeps negative remainders)
     if (local_x < 0)
+    {
         local_x += CHUNK_SIZE_X;
+    }
     if (local_y < 0)
+    {
         local_y += CHUNK_SIZE_Y;
+    }
 
     // Bounds check
-    if (chunk_x < 0 || chunk_x >= CHUNK_COUNT_X || chunk_y < 0 ||
-        chunk_y >= CHUNK_COUNT_Y)
+    if (chunk_x < 0 || chunk_x >= CHUNK_COUNT_X || chunk_y < 0 || chunk_y >= CHUNK_COUNT_Y)
     {
         throw std::out_of_range("Global coordinates out of world bounds");
     }
@@ -77,12 +84,13 @@ Element &WorldManager::get_element_global(int x, int y)
     return m_chunks[chunk_index].at(local_x, local_y);
 }
 
-bool WorldManager::get_chunk_for_global_cell(int gx, int gy, int &out_x,
-                                             int &out_y, int &out_lx,
+bool WorldManager::get_chunk_for_global_cell(int gx, int gy, int &out_x, int &out_y, int &out_lx,
                                              int &out_ly) const
 {
     if (gx < 0 || gy < 0)
+    {
         return false;
+    }
 
     int cells_per_chunk_x = Chunk::m_width;
     int cells_per_chunk_y = Chunk::m_height;
@@ -90,9 +98,10 @@ bool WorldManager::get_chunk_for_global_cell(int gx, int gy, int &out_x,
     out_x = gx / cells_per_chunk_x;
     out_y = gy / cells_per_chunk_y;
 
-    if (out_x < 0 || out_x >= CHUNK_COUNT_X || out_y < 0 ||
-        out_y >= CHUNK_COUNT_Y)
+    if (out_x < 0 || out_x >= CHUNK_COUNT_X || out_y < 0 || out_y >= CHUNK_COUNT_Y)
+    {
         return false;
+    }
 
     out_lx = gx % cells_per_chunk_x;
     out_ly = gy % cells_per_chunk_y;
@@ -109,7 +118,9 @@ void WorldManager::step()
     // Cross-chunk swaps may activate additional chunks; those will run next
     const size_t active_count = m_active_chunks.size();
     if (active_count == 0)
+    {
         return;
+    }
 
     // Phase buffers sized to the frozen count
     m_decision_ptrs.clear();
@@ -126,8 +137,7 @@ void WorldManager::step()
     {
         Chunk *c = m_active_chunks[i];
 
-        std::vector<MoveDecision> &decisions =
-            c->process_movement(tick, m_bias);
+        std::vector<MoveDecision> &decisions = c->process_movement(tick, m_bias);
         m_decision_ptrs.push_back(&decisions);
 
         had_decisions[i] = static_cast<uint8_t>(!decisions.empty());
@@ -137,24 +147,28 @@ void WorldManager::step()
         c->clear_dirty();
     }
 
-    //  apply in-chunk decisions
+    //  empty out the cross-chunk decisions
     m_cross.clear();
 
+    //  apply in-chunk decisions
     for (size_t i = 0; i < active_count; ++i)
     {
         Chunk                     *c         = m_active_chunks[i];
         std::vector<MoveDecision> &decisions = *m_decision_ptrs[i];
-
-        std::vector<MoveDecision> outside = c->apply_decisions(decisions);
+        std::vector<MoveDecision>  outside   = c->apply_decisions(decisions);
 
         if (!outside.empty())
+        {
             m_cross.insert(m_cross.end(), outside.begin(), outside.end());
+        }
     }
 
     //  resolve cross-chunk swaps
     // (may activate more chunks; that's OK now)
     if (!m_cross.empty())
+    {
         apply_cross_chunk_swaps(m_cross);
+    }
 
     //  deactivate stable chunks from the frozen set only
     for (size_t i = 0; i < active_count; ++i)
@@ -165,7 +179,9 @@ void WorldManager::step()
         //  - it produced no decisions in Phase 1
         //  - AND nothing dirtied it during apply/cross swap
         if (!had_decisions[i] && !c->is_dirty())
+        {
             m_chunks_to_deactivate.push_back(c);
+        }
     }
 
     for (Chunk *c : m_chunks_to_deactivate)
@@ -173,18 +189,18 @@ void WorldManager::step()
         deactivate_chunk(*c);
 
         // IMPORTANT: do NOT clear dirty here.
-        // Dirty should represent "needs work next tick".
+        // Dirty should represent: "needs work next tick".
     }
     m_bias = !m_bias;
     tick++;
 }
 
-void WorldManager::apply_cross_chunk_swaps(
-    const std::vector<MoveDecision> &cross)
+void WorldManager::apply_cross_chunk_swaps(const std::vector<MoveDecision> &cross)
 {
-    constexpr int W               = Chunk::m_width;
-    constexpr int H               = Chunk::m_height;
-    const int     cells_per_chunk = W * H;
+    constexpr int W = Chunk::m_width;
+    constexpr int H = Chunk::m_height;
+
+    const int cells_per_chunk = W * H;
 
     // Per-chunk used masks (byte-per-cell, fast)
     static std::vector<uint8_t> used;
@@ -195,9 +211,10 @@ void WorldManager::apply_cross_chunk_swaps(
 
     for (const MoveDecision &d : cross)
     {
-        if (d.move_type != MoveType::Swap &&
-            d.move_type != MoveType::Processing)
+        if (d.move_type != MoveType::Swap && d.move_type != MoveType::Processing)
+        {
             continue;
+        }
 
         //  Convert local coords (possibly negative/oob) to GLOBAL
         const int base_gx = d.origin_cx * W;

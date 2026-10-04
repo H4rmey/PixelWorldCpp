@@ -149,8 +149,7 @@ class ScaffoldingMovement : public IMovement
 class SandMovement : public IMovement
 {
   public:
-    MoveDecision process(uint8_t tick, int x, int y,
-                         Chunk &chunk) const override
+    MoveDecision process(uint8_t tick, int x, int y, Chunk &chunk) const override
     {
         // get the element at the location
         Element &self = chunk.get_element_local(x, y);
@@ -249,7 +248,7 @@ class SandMovement : public IMovement
             self.physics.terminal_velocity_y--;
             int dx1 = self.physics.velocity_resolve_dir_x;
             if (canSwap(x + dx1, y))
-            {
+			{
                 return {x, y, x + dx1, y, 0, 0, MoveType::Swap};
             }
         }

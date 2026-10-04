@@ -9,8 +9,7 @@ void Chunk::fill_with_empty()
 {
     for (Element &e : m_elements)
     {
-        e = Element(MatterState::None, ElementType::Empty, &empty_movement,
-                    Physics::Empty);
+        e = Element(MatterState::None, ElementType::Empty, &empty_movement, Physics::Empty);
     }
 }
 
@@ -21,7 +20,9 @@ void Chunk::fill_with_empty()
 void Chunk::activate_cardinal_neighbors()
 {
     if (!m_world)
+    {
         return;
+    }
 
     int cx = m_world_pos_x;
     int cy = m_world_pos_y;
@@ -44,7 +45,9 @@ void Chunk::activate_cardinal_neighbors()
 void Chunk::activate_all_neighbors()
 {
     if (!m_world)
+    {
         return;
+    }
 
     int cx = m_world_pos_x;
     int cy = m_world_pos_y;
@@ -54,7 +57,9 @@ void Chunk::activate_all_neighbors()
         for (int dx = -1; dx <= 1; ++dx)
         {
             if (dx == 0 && dy == 0)
+            {
                 continue; // Skip self
+            }
 
             int nx = cx + dx;
             int ny = cy + dy;
@@ -78,13 +83,21 @@ void Chunk::set_element_local(int x, int y, const Element &e)
     if (x == 0 || x == m_width - 1 || y == 0 || y == m_height - 1)
     {
         if (cx > 0)
+        {
             m_world->activate_chunk(m_world->chunk_at(cx - 1, cy));
+        }
         if (cx < CHUNK_COUNT_X - 1)
+        {
             m_world->activate_chunk(m_world->chunk_at(cx + 1, cy));
+        }
         if (cy > 0)
+        {
             m_world->activate_chunk(m_world->chunk_at(cx, cy - 1));
+        }
         if (cy < CHUNK_COUNT_Y - 1)
+        {
             m_world->activate_chunk(m_world->chunk_at(cx, cy + 1));
+        }
     }
 
     // Left border affects left neighbor's right border
@@ -123,8 +136,7 @@ void Chunk::set_element_local(int x, int y, const Element &e)
 }
 
 // Returns the global coordinate of a specific local tile
-void Chunk::get_global_coords(int local_x, int local_y, int &out_global_x,
-                              int &out_global_y) const
+void Chunk::get_global_coords(int local_x, int local_y, int &out_global_x, int &out_global_y) const
 {
     out_global_x = m_world_pos_x * m_width + local_x;
     out_global_y = m_world_pos_y * m_height + local_y;
@@ -154,8 +166,7 @@ Element &Chunk::get_element_local(int x, int y)
 
 Element &Chunk::get_element_global(int global_x, int global_y)
 {
-    if (global_x < 0 || global_y < 0 || global_x >= WORLD_SIZE_X ||
-        global_y >= WORLD_SIZE_Y)
+    if (global_x < 0 || global_y < 0 || global_x >= WORLD_SIZE_X || global_y >= WORLD_SIZE_Y)
     {
         return Element::OutOfBounds();
     }
@@ -191,14 +202,14 @@ std::vector<MoveDecision> &Chunk::process_movement(uint8_t tick, bool bias)
     {
         if (bias)
         {
-            for (int x = m_dirty_rect.max_x + 3; x >= m_dirty_rect.min_x - 3;
-                 --x)
+            for (int x = m_dirty_rect.max_x + 3; x >= m_dirty_rect.min_x - 3; --x)
             {
                 if (y < 0 || x < 0 || x >= CHUNK_SIZE_X || y >= CHUNK_SIZE_Y)
+                {
                     continue;
+                }
 
-                MoveDecision d = m_elements[index(x, y)].movement->process(
-                    tick, x, y, *this);
+                MoveDecision d = m_elements[index(x, y)].movement->process(tick, x, y, *this);
 
                 if (d.move_type != MoveType::Stay)
                 {
@@ -210,14 +221,14 @@ std::vector<MoveDecision> &Chunk::process_movement(uint8_t tick, bool bias)
         }
         else
         {
-            for (int x = m_dirty_rect.min_x - 3; x <= m_dirty_rect.max_x + 3;
-                 ++x)
+            for (int x = m_dirty_rect.min_x - 3; x <= m_dirty_rect.max_x + 3; ++x)
             {
                 if (y < 0 || x < 0 || x >= CHUNK_SIZE_X || y >= CHUNK_SIZE_Y)
+                {
                     continue;
+                }
 
-                MoveDecision d = m_elements[index(x, y)].movement->process(
-                    tick, x, y, *this);
+                MoveDecision d = m_elements[index(x, y)].movement->process(tick, x, y, *this);
 
                 if (d.move_type != MoveType::Stay)
                 {
@@ -232,8 +243,7 @@ std::vector<MoveDecision> &Chunk::process_movement(uint8_t tick, bool bias)
     return m_decisions;
 }
 
-std::vector<MoveDecision>
-Chunk::apply_decisions(std::vector<MoveDecision> &decisions)
+std::vector<MoveDecision> Chunk::apply_decisions(std::vector<MoveDecision> &decisions)
 {
     // 1. Initialize the random engine
     static std::random_device rd;
@@ -291,14 +301,15 @@ Chunk::apply_decisions(std::vector<MoveDecision> &decisions)
 
     for (const MoveDecision &d : decisions)
     {
-        if (d.move_type != MoveType::Swap &&
-            d.move_type != MoveType::Processing)
+        if (d.move_type != MoveType::Swap && d.move_type != MoveType::Processing)
+        {
             continue;
+        }
 
-        const bool old_in = (unsigned)d.old_x < (unsigned)m_width &&
-                            (unsigned)d.old_y < (unsigned)m_height;
-        const bool new_in = (unsigned)d.new_x < (unsigned)m_width &&
-                            (unsigned)d.new_y < (unsigned)m_height;
+        const bool old_in =
+            (unsigned)d.old_x < (unsigned)m_width && (unsigned)d.old_y < (unsigned)m_height;
+        const bool new_in =
+            (unsigned)d.new_x < (unsigned)m_width && (unsigned)d.new_y < (unsigned)m_height;
 
         if (!old_in || !new_in)
         {
