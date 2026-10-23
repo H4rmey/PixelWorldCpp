@@ -7,7 +7,8 @@
 class IMovement;
 class Chunk;
 
-class Element {
+class Element
+{
   public:
     ElementType      type     = ElementType::Empty;
     MatterState      state    = MatterState::None;
@@ -16,9 +17,10 @@ class Element {
 
     Element() = default;
 
-    Element(MatterState m, ElementType t, const IMovement *move,
-            const Physics &p)
-        : state(m), type(t), movement(move), physics(p) {}
+    Element(MatterState m, ElementType t, const IMovement *move, const Physics &p)
+        : state(m), type(t), movement(move), physics(p)
+    {
+    }
 
     inline bool is_empty() const { return type == ElementType::Empty; }
 

@@ -87,14 +87,8 @@ class Chunk
     void activate_all_neighbors();
 
     inline const Rect &get_dirty_rect() const { return m_dirty_rect; }
-    inline static int  index(int local_x, int local_y)
-    {
-        return m_width * local_y + local_x;
-    }
-    inline Element &at(int local_x, int local_y)
-    {
-        return m_elements[index(local_x, local_y)];
-    }
+    inline static int  index(int local_x, int local_y) { return m_width * local_y + local_x; }
+    inline Element    &at(int local_x, int local_y) { return m_elements[index(local_x, local_y)]; }
     inline const Element &at(int local_x, int local_y) const
     {
         return m_elements[index(local_x, local_y)];
@@ -128,8 +122,7 @@ class Chunk
 
     inline bool is_dirty() const
     {
-        return m_dirty_rect.max_x >= m_dirty_rect.min_x &&
-               m_dirty_rect.max_y >= m_dirty_rect.min_y;
+        return m_dirty_rect.max_x >= m_dirty_rect.min_x && m_dirty_rect.max_y >= m_dirty_rect.min_y;
     }
 
     inline const Rect &get_dirty_rect_local() const { return m_dirty_rect; }
@@ -137,10 +130,8 @@ class Chunk
     Element &get_element_global(int local_x, int local_y);
     Element &get_element_local(int local_x, int local_y);
 
-    void get_global_coords(int local_x, int local_y, int &out_global_x,
-                           int &out_global_y) const;
+    void get_global_coords(int local_x, int local_y, int &out_global_x, int &out_global_y) const;
 
     std::vector<MoveDecision> &process_movement(uint8_t tick, bool bias);
-    std::vector<MoveDecision>
-    apply_decisions(std::vector<MoveDecision> &decisions);
+    std::vector<MoveDecision>  apply_decisions(std::vector<MoveDecision> &decisions);
 };

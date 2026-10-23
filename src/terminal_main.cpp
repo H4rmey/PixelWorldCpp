@@ -1,10 +1,10 @@
-#include "helpers/constants.h"
-#include "helpers/element_type.h"
-#include "helpers/matter_state.h"
-#include "helpers/physics.hpp"
-#include "movement/IMovement.h"
-#include "movement_systems.hpp"
-#include "world_manager.hpp"
+#include "world/chunkManager.hpp"
+#include "world/helpers/constants.h"
+#include "world/helpers/element_type.h"
+#include "world/helpers/matter_state.h"
+#include "world/helpers/physics.hpp"
+#include "world/movement/IMovement.h"
+#include "world/movementSystems.hpp"
 #include <algorithm>
 #include <iostream>
 #include <raylib.h>
@@ -100,27 +100,24 @@ int main()
         {
             step_once = true;
         }
-        const bool shiftDown =
-            IsKeyDown(KEY_LEFT_SHIFT) || IsKeyDown(KEY_RIGHT_SHIFT);
+        const bool shiftDown = IsKeyDown(KEY_LEFT_SHIFT) || IsKeyDown(KEY_RIGHT_SHIFT);
 
         // ---------------------------
         // Zoom (SHIFT + +/-)
         // ---------------------------
         if (shiftDown)
         {
-            bool zoomIn = (IsKeyPressed(KEY_KP_ADD) || IsKeyPressed(KEY_EQUAL));
-            bool zoomOut =
-                (IsKeyPressed(KEY_KP_SUBTRACT) || IsKeyPressed(KEY_MINUS));
+            bool zoomIn  = (IsKeyPressed(KEY_KP_ADD) || IsKeyPressed(KEY_EQUAL));
+            bool zoomOut = (IsKeyPressed(KEY_KP_SUBTRACT) || IsKeyPressed(KEY_MINUS));
 
             if (zoomIn || zoomOut)
             {
                 Vector2 mouse_screen = GetMousePosition();
                 Vector2 before       = GetScreenToWorld2D(mouse_screen, camera);
 
-                float newZoom =
-                    camera.zoom * (zoomIn ? zoom_step : (1.0f / zoom_step));
-                newZoom     = std::clamp(newZoom, zoom_min, zoom_max);
-                camera.zoom = newZoom;
+                float newZoom = camera.zoom * (zoomIn ? zoom_step : (1.0f / zoom_step));
+                newZoom       = std::clamp(newZoom, zoom_min, zoom_max);
+                camera.zoom   = newZoom;
 
                 Vector2 after = GetScreenToWorld2D(mouse_screen, camera);
                 camera.target.x += (before.x - after.x);
@@ -131,10 +128,14 @@ int main()
         {
             // Brush size
             if (IsKeyPressed(KEY_KP_ADD) || IsKeyPressed(KEY_EQUAL))
+            {
                 brush_size = std::min(90, brush_size + 1);
+            }
 
             if (IsKeyPressed(KEY_KP_SUBTRACT) || IsKeyPressed(KEY_MINUS))
+            {
                 brush_size = std::max(0, brush_size - 1);
+            }
         }
 
         // ---------------------------
@@ -155,13 +156,21 @@ int main()
             float step = (cam_pan_speed * dt) / camera.zoom;
 
             if (IsKeyDown(KEY_RIGHT))
+            {
                 camera.target.x += step;
+            }
             if (IsKeyDown(KEY_LEFT))
+            {
                 camera.target.x -= step;
+            }
             if (IsKeyDown(KEY_DOWN))
+            {
                 camera.target.y += step;
+            }
             if (IsKeyDown(KEY_UP))
+            {
                 camera.target.y -= step;
+            }
         }
 
         // ---------------------------
@@ -235,8 +244,8 @@ int main()
 
         bool isPanning = shiftDown && IsMouseButtonDown(MOUSE_LEFT_BUTTON);
 
-        if (!isPanning && (IsMouseButtonDown(MOUSE_LEFT_BUTTON) ||
-                           IsMouseButtonDown(MOUSE_RIGHT_BUTTON)))
+        if (!isPanning &&
+            (IsMouseButtonDown(MOUSE_LEFT_BUTTON) || IsMouseButtonDown(MOUSE_RIGHT_BUTTON)))
         {
             bool erase = IsMouseButtonDown(MOUSE_RIGHT_BUTTON);
 
@@ -250,22 +259,16 @@ int main()
                         int py = gy + dy;
 
                         int cx, cy, lx, ly;
-                        if (world.get_chunk_for_global_cell(px, py, cx, cy, lx,
-                                                            ly))
+                        if (world.get_chunk_for_global_cell(px, py, cx, cy, lx, ly))
                         {
-                            ElementType type_to_set =
-                                erase ? ElementType::Empty : brush_type;
-                            IMovement *move_ptr =
-                                erase ? &empty_movement : movement_ptr;
-                            MatterState matterstate =
-                                erase ? MatterState::None : matter_state;
-                            Physics physics_type_to_set =
-                                erase ? Physics::Empty : physics_type;
+                            ElementType type_to_set = erase ? ElementType::Empty : brush_type;
+                            IMovement  *move_ptr    = erase ? &empty_movement : movement_ptr;
+                            MatterState matterstate = erase ? MatterState::None : matter_state;
+                            Physics     physics_type_to_set = erase ? Physics::Empty : physics_type;
 
                             world.chunk_at(cx, cy).set_element_local(
                                 lx, ly,
-                                Element(matterstate, type_to_set, move_ptr,
-                                        physics_type_to_set));
+                                Element(matterstate, type_to_set, move_ptr, physics_type_to_set));
                         }
                     }
                 }
@@ -277,7 +280,9 @@ int main()
 
         // Safety cap: prevents "spiral of death" if the simulation lags
         if (frameTime > 0.25f)
+        {
             frameTime = 0.25f;
+        }
 
         accumulator += frameTime;
 
@@ -347,8 +352,7 @@ int main()
                         ElementType type = chunk.at(x, y).type;
                         Color       c    = element_to_color(type);
 
-                        DrawRectangle((base_x + x) * cellSize,
-                                      (base_y + y) * cellSize, cellSize,
+                        DrawRectangle((base_x + x) * cellSize, (base_y + y) * cellSize, cellSize,
                                       cellSize, c);
                     }
                 }
@@ -367,15 +371,13 @@ int main()
 
                 Chunk &chunk = world.chunk_at(x, y);
                 DrawRectangleLines(posx, posy, width, height,
-                                   (chunk.active_index == UINT32_MAX) ? RED
-                                                                      : GREEN);
+                                   (chunk.active_index == UINT32_MAX) ? RED : GREEN);
             }
         }
 
         // --- Draw brush preview ---
-        DrawCircleLines(static_cast<int>(mouse_world.x),
-                        static_cast<int>(mouse_world.y), brush_size * cellSize,
-                        RED);
+        DrawCircleLines(static_cast<int>(mouse_world.x), static_cast<int>(mouse_world.y),
+                        brush_size * cellSize, RED);
 
         EndMode2D();
 

@@ -36,12 +36,15 @@ class WorldManager
                 Chunk &chunk = m_chunks[index(x, y)];
                 chunk.init(this, x, y);
 
-                if (x == 0 || y == 0 || x == CHUNK_COUNT_X - 1 ||
-                    y == CHUNK_COUNT_Y - 1)
+                if (x == 0 || y == 0 || x == CHUNK_COUNT_X - 1 || y == CHUNK_COUNT_Y - 1)
                 {
                     for (int ly = 0; ly < CHUNK_SIZE_Y; ++ly)
+                    {
                         for (int lx = 0; lx < CHUNK_SIZE_X; ++lx)
+                        {
                             chunk.at(lx, ly).type = ElementType::Bedrock;
+                        }
+                    }
                     // optionally: chunk.deactivate / don't activate ever
                 }
             }
@@ -68,14 +71,11 @@ class WorldManager
 
     Element                    &get_element_global(int x, int y);
     const Element              &get_element_global(int x, int y) const;
-    const std::vector<Chunk *> &get_active_chunks() const
-    {
-        return m_active_chunks;
-    }
+    const std::vector<Chunk *> &get_active_chunks() const { return m_active_chunks; }
 
     // Map global cell coordinates to chunk + local coords
-    bool get_chunk_for_global_cell(int gx, int gy, int &out_x, int &out_y,
-                                   int &out_lx, int &out_ly) const;
+    bool get_chunk_for_global_cell(int gx, int gy, int &out_x, int &out_y, int &out_lx,
+                                   int &out_ly) const;
 
     // One full simulation step
     void step();

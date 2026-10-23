@@ -1,7 +1,7 @@
 #include "chunk.hpp"
 #include "helpers/constants.h"
+#include "chunkManager.hpp"
 #include "movement/IMovement.h"
-#include "world_manager.hpp"
 #include <random>
 #include <raylib.h>
 
@@ -184,7 +184,7 @@ Element &Chunk::get_element_global(int global_x, int global_y)
     int target_chunk_x = global_x / m_width;
     int target_chunk_y = global_y / m_height;
 
-    // Ask the world manager for the correct chunk
+    // Ask the world chunkManager for the correct chunk
     Chunk &neighbor = m_world->chunk_at(target_chunk_x, target_chunk_y);
 
     // Forward the request to the correct chunk

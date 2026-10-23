@@ -38,7 +38,7 @@ inline float fastRandomFloatRange(float min = 0.0f, float max = 1.0f)
 }
 inline float fastRandomFloat01()
 {
-    static thread_local std::mt19937 rng(std::random_device{}());
+    static thread_local std::mt19937                          rng(std::random_device{}());
     static thread_local std::uniform_real_distribution<float> dist(0.0f, 1.0f);
     return dist(rng);
 }
@@ -51,8 +51,7 @@ class ScaffoldingMovement : public IMovement
   public:
     static constexpr int MAX_HORIZONTAL_CHAIN = 8;
 
-    MoveDecision process(uint8_t tick, int x, int y,
-                         Chunk &chunk) const override
+    MoveDecision process(uint8_t tick, int x, int y, Chunk &chunk) const override
     {
         Element &self = chunk.get_element_local(x, y);
 
@@ -75,8 +74,7 @@ class ScaffoldingMovement : public IMovement
         Element &below = chunk.get_element_global(gx, gy + 1);
 
         // If below is Solid or World Boundary, it's a Vertical Anchor
-        if (below.state == MatterState::Solid ||
-            below.type == ElementType::OutOfBounds)
+        if (below.state == MatterState::Solid || below.type == ElementType::OutOfBounds)
         {
             self.physics.is_v_anchor = true;
             return MoveDecision::Stay(x, y);
@@ -187,8 +185,7 @@ class SandMovement : public IMovement
                 int neighbor_gx = global_x + dx[i];
                 int neighbor_gy = global_y + dy[i];
 
-                Element &neighbor =
-                    chunk.get_element_global(neighbor_gx, neighbor_gy);
+                Element &neighbor = chunk.get_element_global(neighbor_gx, neighbor_gy);
 
                 if (fastRandomBool(neighbor.physics.stability))
                 {
@@ -248,7 +245,7 @@ class SandMovement : public IMovement
             self.physics.terminal_velocity_y--;
             int dx1 = self.physics.velocity_resolve_dir_x;
             if (canSwap(x + dx1, y))
-			{
+            {
                 return {x, y, x + dx1, y, 0, 0, MoveType::Swap};
             }
         }
@@ -265,8 +262,7 @@ class SandMovement : public IMovement
 class SolidMovement : public IMovement
 {
   public:
-    MoveDecision process(uint8_t tick, int x, int y,
-                         Chunk &chunk) const override
+    MoveDecision process(uint8_t tick, int x, int y, Chunk &chunk) const override
     {
         return MoveDecision::Stay(x, y);
     }
@@ -278,8 +274,7 @@ class SolidMovement : public IMovement
 class GasMovement : public IMovement
 {
   public:
-    MoveDecision process(uint8_t tick, int x, int y,
-                         Chunk &chunk) const override
+    MoveDecision process(uint8_t tick, int x, int y, Chunk &chunk) const override
     {
         const Element &self = chunk.get_element_local(x, y);
 
@@ -289,31 +284,43 @@ class GasMovement : public IMovement
         }
 
         if (self.is_empty())
+        {
             return MoveDecision::Stay(x, y);
+        }
 
         // Try up
         const Element &up = chunk.get_element_local(x, y - 1);
         if (up.is_empty())
+        {
             return {x, y, x, y - 1, 0, 0, MoveType::Swap};
+        }
 
         // Try up-left
         const Element &up_left = chunk.get_element_local(x - 1, y - 1);
         if (up_left.is_empty())
+        {
             return {x, y, x - 1, y - 1, 0, 0, MoveType::Swap};
+        }
 
         // Try up-right
         const Element &up_right = chunk.get_element_local(x + 1, y - 1);
         if (up_right.is_empty())
+        {
             return {x, y, x + 1, y - 1, 0, 0, MoveType::Swap};
+        }
 
         // Try sideways
         const Element &left = chunk.get_element_local(x - 1, y);
         if (left.is_empty())
+        {
             return {x, y, x - 1, y, 0, 0, MoveType::Swap};
+        }
 
         const Element &right = chunk.get_element_local(x + 1, y);
         if (right.is_empty())
+        {
             return {x, y, x + 1, y, 0, 0, MoveType::Swap};
+        }
 
         return MoveDecision::Stay(x, y);
     }
@@ -325,8 +332,7 @@ class GasMovement : public IMovement
 class LiquidMovement : public IMovement
 {
   public:
-    MoveDecision process(uint8_t tick, int x, int y,
-                         Chunk &chunk) const override
+    MoveDecision process(uint8_t tick, int x, int y, Chunk &chunk) const override
     {
         Element &self = chunk.get_element_local(x, y);
 
@@ -336,7 +342,9 @@ class LiquidMovement : public IMovement
         }
 
         if (!self.physics.canMove_y)
+        {
             return MoveDecision::Stay(x, y);
+        }
 
         int gx, gy;
         chunk.get_global_coords(x, y, gx, gy);
@@ -369,12 +377,10 @@ class LiquidMovement : public IMovement
 
         // Try to find a spot. We pass 'true' to prioritize holes over flat
         // ground.
-        int next_gx =
-            find_lateral_pos(gx, gy, dir, self.physics.viscosity, chunk);
+        int next_gx = find_lateral_pos(gx, gy, dir, self.physics.viscosity, chunk);
         if (next_gx == gx)
         {
-            next_gx =
-                find_lateral_pos(gx, gy, -dir, self.physics.viscosity, chunk);
+            next_gx = find_lateral_pos(gx, gy, -dir, self.physics.viscosity, chunk);
         }
 
         if (next_gx != gx)
@@ -391,8 +397,7 @@ class LiquidMovement : public IMovement
     }
 
   private:
-    int find_lateral_pos(int gx, int gy, int dir, int viscosity,
-                         Chunk &chunk) const
+    int find_lateral_pos(int gx, int gy, int dir, int viscosity, Chunk &chunk) const
     {
         int last_valid_gx = gx;
 
@@ -413,8 +418,7 @@ class LiquidMovement : public IMovement
 
         // If we are here, we found a flat path.
         // To prevent gaps, only move to the IMMEDIATE neighbor if no hole was
-        // found. Or, use a probability to decide if we should jump the full
-        // distance.
+        // found. Or, use a probability to decide if we should jump the full distance.
         if (last_valid_gx != gx)
         {
             // Only move ONE pixel at a time if there's no hole to fall into.
