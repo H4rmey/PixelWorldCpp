@@ -67,3 +67,8 @@ compile_commands.json
 # Cmake
 cmake-build*
 CMakeUserPresets.json
+
+
+
+# new
+exe

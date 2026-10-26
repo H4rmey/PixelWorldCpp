@@ -1,6 +1,6 @@
 #include "chunk.hpp"
-#include "helpers/constants.h"
 #include "chunkManager.hpp"
+#include "helpers/constants.h"
 #include "movement/IMovement.h"
 #include <random>
 #include <raylib.h>
@@ -9,7 +9,7 @@ void Chunk::fill_with_empty()
 {
     for (Element &e : m_elements)
     {
-        e = Element(MatterState::None, ElementType::Empty, &empty_movement, Physics::Empty);
+        e = Element(RenderLayer::None, ElementType::Empty, 0, &empty_movement, Physics::Empty);
     }
 }
 

@@ -11,7 +11,7 @@
 #include "helpers/move_decision.h"
 #include "movement/IMovement.h"
 
-class WorldManager;
+class ChunkManager;
 
 // ---------------------------------------------------------
 // Neighbor directions
@@ -57,7 +57,7 @@ class Chunk
 
     Rect m_dirty_rect{};
 
-    WorldManager *m_world;
+    ChunkManager *m_world;
 
   public:
     Chunk()  = default;
@@ -69,7 +69,7 @@ class Chunk
     Chunk(Chunk &&)            = default;
     Chunk &operator=(Chunk &&) = default;
 
-    void init(WorldManager *world, int x, int y)
+    void init(ChunkManager *world, int x, int y)
     {
         m_world       = world;
         m_world_pos_x = x;
@@ -97,6 +97,7 @@ class Chunk
     inline const int &get_world_pos_y() const { return m_world_pos_y; }
 
     void set_element_local(int local_x, int local_y, const Element &e);
+    void set_element_global(int global_x, int global_y, const Element &e);
 
     inline void mark_dirty(int local_x, int local_y)
     {
@@ -127,7 +128,7 @@ class Chunk
 
     inline const Rect &get_dirty_rect_local() const { return m_dirty_rect; }
 
-    Element &get_element_global(int local_x, int local_y);
+    Element &get_element_global(int global_x, int global_y);
     Element &get_element_local(int local_x, int local_y);
 
     void get_global_coords(int local_x, int local_y, int &out_global_x, int &out_global_y) const;

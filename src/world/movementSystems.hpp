@@ -3,45 +3,10 @@
 #include "chunk.hpp"
 #include "helpers/constants.h"
 #include "helpers/element_type.h"
-#include "helpers/matter_state.h"
 #include "helpers/move_decision.h"
+#include "helpers/renderLayer.h"
+#include "helpers/tools.h"
 #include "movement/IMovement.h"
-
-#include <random>
-
-inline bool fastRandomBool(float distribution)
-{
-    static thread_local std::mt19937                rng(std::random_device{}());
-    static thread_local std::bernoulli_distribution dist(distribution);
-    return dist(rng);
-}
-
-inline bool fastRandomBool()
-{
-    static thread_local std::mt19937                rng(std::random_device{}());
-    static thread_local std::bernoulli_distribution dist(0.5);
-    return dist(rng);
-}
-
-inline int fastRandomIntRange(int min = 0, int max = 255)
-{
-    static thread_local std::mt19937 rng(std::random_device{}());
-    // Note: distribution range must be set at construction or passed as param
-    std::uniform_int_distribution<int> dist(min, max);
-    return dist(rng);
-}
-inline float fastRandomFloatRange(float min = 0.0f, float max = 1.0f)
-{
-    static thread_local std::mt19937      rng(std::random_device{}());
-    std::uniform_real_distribution<float> dist(min, max);
-    return dist(rng);
-}
-inline float fastRandomFloat01()
-{
-    static thread_local std::mt19937                          rng(std::random_device{}());
-    static thread_local std::uniform_real_distribution<float> dist(0.0f, 1.0f);
-    return dist(rng);
-}
 
 // ---------------------------------------------------------
 // Scaffolding
@@ -74,7 +39,7 @@ class ScaffoldingMovement : public IMovement
         Element &below = chunk.get_element_global(gx, gy + 1);
 
         // If below is Solid or World Boundary, it's a Vertical Anchor
-        if (below.state == MatterState::Solid || below.type == ElementType::OutOfBounds)
+        if (below.layer == RenderLayer::Solid || below.type == ElementType::OutOfBounds)
         {
             self.physics.is_v_anchor = true;
             return MoveDecision::Stay(x, y);
@@ -131,7 +96,7 @@ class ScaffoldingMovement : public IMovement
                 // stable
                 if (below_check.type == ElementType::Scaffolding ||
                     below_check.type == ElementType::OutOfBounds ||
-                    below_check.state == MatterState::Solid)
+                    below_check.layer == RenderLayer::Solid)
                 {
                     return true;
                 }

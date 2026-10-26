@@ -1,6 +1,8 @@
 #pragma once
 
-enum class ElementType {
+// Register the different elements here
+enum class ElementType
+{
     Empty,
     OutOfBounds,
     Sand,

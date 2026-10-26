@@ -4,7 +4,7 @@
 #include "helpers/tools.h"
 #include <vector>
 
-Chunk &WorldManager::chunk_at(int x, int y)
+Chunk &ChunkManager::chunk_at(int x, int y)
 {
     if (x < 0 || x >= CHUNK_COUNT_X || y < 0 || y >= CHUNK_COUNT_Y)
     {
@@ -14,7 +14,7 @@ Chunk &WorldManager::chunk_at(int x, int y)
     return m_chunks[y * CHUNK_COUNT_X + x];
 }
 
-const Chunk &WorldManager::chunk_at(int x, int y) const
+const Chunk &ChunkManager::chunk_at(int x, int y) const
 {
     if (x < 0 || x >= CHUNK_COUNT_X || y < 0 || y >= CHUNK_COUNT_Y)
     {
@@ -24,7 +24,7 @@ const Chunk &WorldManager::chunk_at(int x, int y) const
     return m_chunks[y * CHUNK_COUNT_X + x];
 }
 
-void WorldManager::activate_chunk(Chunk &c)
+void ChunkManager::activate_chunk(Chunk &c)
 {
     if (c.active_index != UINT32_MAX)
     {
@@ -35,7 +35,7 @@ void WorldManager::activate_chunk(Chunk &c)
     m_active_chunks.push_back(&c);
 }
 
-void WorldManager::deactivate_chunk(Chunk &c)
+void ChunkManager::deactivate_chunk(Chunk &c)
 {
     uint32_t idx = c.active_index;
     if (idx == UINT32_MAX)
@@ -51,7 +51,16 @@ void WorldManager::deactivate_chunk(Chunk &c)
     c.active_index = UINT32_MAX;
 }
 
-Element &WorldManager::get_element_global(int x, int y)
+void ChunkManager::set_element_global(int gx, int gy, Element &e)
+{
+    int cx, cy, lx, ly;
+    if (get_chunk_for_global_cell(gx, gy, cx, cy, lx, ly))
+    {
+        chunk_at(cx, cy).set_element_local(lx, ly, e);
+    }
+}
+
+Element &ChunkManager::get_element_global(int x, int y)
 {
     // Determine which chunk the global coordinate belongs to
     int chunk_x = x / CHUNK_SIZE_X;
@@ -84,7 +93,7 @@ Element &WorldManager::get_element_global(int x, int y)
     return m_chunks[chunk_index].at(local_x, local_y);
 }
 
-bool WorldManager::get_chunk_for_global_cell(int gx, int gy, int &out_x, int &out_y, int &out_lx,
+bool ChunkManager::get_chunk_for_global_cell(int gx, int gy, int &out_x, int &out_y, int &out_lx,
                                              int &out_ly) const
 {
     if (gx < 0 || gy < 0)
@@ -108,7 +117,7 @@ bool WorldManager::get_chunk_for_global_cell(int gx, int gy, int &out_x, int &ou
     return true;
 }
 
-void WorldManager::step()
+void ChunkManager::step()
 {
     if (tick >= GRAVITY)
     {
@@ -195,7 +204,7 @@ void WorldManager::step()
     tick++;
 }
 
-void WorldManager::apply_cross_chunk_swaps(const std::vector<MoveDecision> &cross)
+void ChunkManager::apply_cross_chunk_swaps(const std::vector<MoveDecision> &cross)
 {
     constexpr int W = Chunk::m_width;
     constexpr int H = Chunk::m_height;

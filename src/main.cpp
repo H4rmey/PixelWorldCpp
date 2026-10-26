@@ -1,10 +1,10 @@
-#include "world/chunkManager.hpp"
 #include "world/helpers/constants.h"
 #include "world/helpers/element_type.h"
-#include "world/helpers/matter_state.h"
 #include "world/helpers/physics.hpp"
+#include "world/helpers/renderLayer.h"
 #include "world/movement/IMovement.h"
 #include "world/movementSystems.hpp"
+#include "world/world.hpp"
 #include <algorithm>
 #include <iostream>
 #include <raylib.h>
@@ -48,7 +48,7 @@ int main()
     SetTargetFPS(MAX_FRAMERATE);
 
     // World + movement systems
-    static WorldManager world;
+    static World        world;
     SandMovement        sand_movement;
     SolidMovement       solid_movement;
     GasMovement         gas_movement;
@@ -64,7 +64,7 @@ int main()
                               //
     int         brush_size   = BRUSH_SIZE;
     ElementType brush_type   = ElementType::Sand;
-    MatterState matter_state = MatterState::Solid;
+    RenderLayer matter_state = RenderLayer::Solid;
     Physics     physics_type = Physics::Empty;
 
     // ---------------------------
@@ -179,49 +179,49 @@ int main()
         if (IsKeyPressed(KEY_ONE))
         {
             brush_type   = ElementType::Sand;
-            matter_state = MatterState::Solid;
+            matter_state = RenderLayer::Solid;
             physics_type = Physics::Sand;
             movement_ptr = &sand_movement;
         }
         if (IsKeyPressed(KEY_TWO))
         {
             brush_type   = ElementType::Water;
-            matter_state = MatterState::Liquid;
+            matter_state = RenderLayer::Liquid;
             physics_type = Physics::Water;
             movement_ptr = &liquid_movement;
         }
         if (IsKeyPressed(KEY_THREE))
         {
             brush_type   = ElementType::Stone;
-            matter_state = MatterState::Solid;
+            matter_state = RenderLayer::Solid;
             physics_type = Physics::Stone;
             movement_ptr = &sand_movement;
         }
         if (IsKeyPressed(KEY_FOUR))
         {
             brush_type   = ElementType::Gas;
-            matter_state = MatterState::Gas;
+            matter_state = RenderLayer::Gas;
             physics_type = Physics::Gas;
             movement_ptr = &gas_movement;
         }
         if (IsKeyPressed(KEY_FIVE))
         {
             brush_type   = ElementType::Custom;
-            matter_state = MatterState::None;
+            matter_state = RenderLayer::None;
             physics_type = Physics::Empty;
             movement_ptr = &empty_movement;
         }
         if (IsKeyPressed(KEY_SIX))
         {
             brush_type   = ElementType::Bedrock;
-            matter_state = MatterState::Solid;
+            matter_state = RenderLayer::Solid;
             physics_type = Physics::Empty;
             movement_ptr = &empty_movement;
         }
         if (IsKeyPressed(KEY_SEVEN))
         {
             brush_type   = ElementType::Empty;
-            matter_state = MatterState::None;
+            matter_state = RenderLayer::None;
             physics_type = Physics::Empty;
             movement_ptr = &empty_movement;
         }
@@ -229,7 +229,7 @@ int main()
         if (IsKeyPressed(KEY_EIGHT))
         {
             brush_type   = ElementType::Scaffolding;
-            matter_state = MatterState::ForeGround;
+            matter_state = RenderLayer::Foreground;
             physics_type = Physics::Scaffolding;
             movement_ptr = &scaffolding_movement;
         }
@@ -259,16 +259,17 @@ int main()
                         int py = gy + dy;
 
                         int cx, cy, lx, ly;
-                        if (world.get_chunk_for_global_cell(px, py, cx, cy, lx, ly))
+                        if (world.chunkManager.get_chunk_for_global_cell(px, py, cx, cy, lx, ly))
                         {
                             ElementType type_to_set = erase ? ElementType::Empty : brush_type;
                             IMovement  *move_ptr    = erase ? &empty_movement : movement_ptr;
-                            MatterState matterstate = erase ? MatterState::None : matter_state;
+                            RenderLayer matterstate = erase ? RenderLayer::None : matter_state;
                             Physics     physics_type_to_set = erase ? Physics::Empty : physics_type;
 
-                            world.chunk_at(cx, cy).set_element_local(
+                            world.chunkManager.chunk_at(cx, cy).set_element_local(
                                 lx, ly,
-                                Element(matterstate, type_to_set, move_ptr, physics_type_to_set));
+                                Element(matterstate, type_to_set, 0, move_ptr,
+                                        physics_type_to_set));
                         }
                     }
                 }
@@ -330,7 +331,7 @@ int main()
             for (int cx = 0; cx < CHUNK_COUNT_X; cx++)
             {
 
-                Chunk &chunk = world.chunk_at(cx, cy);
+                Chunk &chunk = world.chunkManager.chunk_at(cx, cy);
 
                 int base_x = cx * CHUNK_SIZE_X;
                 int base_y = cy * CHUNK_SIZE_Y;
@@ -369,7 +370,7 @@ int main()
                 int width  = CHUNK_SIZE_X * cellSize - 1;
                 int height = CHUNK_SIZE_Y * cellSize - 1;
 
-                Chunk &chunk = world.chunk_at(x, y);
+                Chunk &chunk = world.chunkManager.chunk_at(x, y);
                 DrawRectangleLines(posx, posy, width, height,
                                    (chunk.active_index == UINT32_MAX) ? RED : GREEN);
             }

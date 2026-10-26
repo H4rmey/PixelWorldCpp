@@ -8,7 +8,7 @@
 #include "helpers/constants.h"
 #include "helpers/element_type.h"
 
-class WorldManager
+class ChunkManager
 {
   private:
     static constexpr std::size_t m_size = CHUNK_COUNT;
@@ -24,7 +24,7 @@ class WorldManager
     bool m_bias = true;
 
   public:
-    WorldManager()
+    ChunkManager()
     {
         // initialize the bedrock chunk
         m_bedrock_chunk = Chunk();
@@ -69,6 +69,7 @@ class WorldManager
     void activate_chunk(Chunk &c);
     void deactivate_chunk(Chunk &c);
 
+    void                        set_element_global(int x, int y, Element &e);
     Element                    &get_element_global(int x, int y);
     const Element              &get_element_global(int x, int y) const;
     const std::vector<Chunk *> &get_active_chunks() const { return m_active_chunks; }
