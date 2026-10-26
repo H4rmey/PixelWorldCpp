@@ -47,7 +47,7 @@ int main()
     InitWindow(screenW, screenH, "World Simulation");
     SetTargetFPS(MAX_FRAMERATE);
 
-    // World + movement systems
+    // world + movement systems
     static World        world;
     SandMovement        sand_movement;
     SolidMovement       solid_movement;
@@ -84,6 +84,8 @@ int main()
     // Target 60 updates per second for the simulation
     const float targetDt    = 1.0f / 60.0f;
     float       accumulator = 0.0f;
+
+    world.init();
 
     while (!WindowShouldClose())
     {
