@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <iostream>
 #include <raylib.h>
+#include <cmath>
 
 Color element_to_color(ElementType type)
 {
@@ -44,11 +45,15 @@ int main()
     const int screenW = total_width * cellSize;
     const int screenH = total_height * cellSize;
 
-    InitWindow(screenW, screenH, "World Simulation");
+    InitWindow(1280, 720, "World Simulation");
     SetTargetFPS(MAX_FRAMERATE);
 
     // world + movement systems
-    static World        world;
+    printf("Start: creating world\n");
+    World        world = World();
+    world.init();
+    printf("Done: creating world\n");
+
     SandMovement        sand_movement;
     SolidMovement       solid_movement;
     GasMovement         gas_movement;
@@ -84,8 +89,6 @@ int main()
     // Target 60 updates per second for the simulation
     const float targetDt    = 1.0f / 60.0f;
     float       accumulator = 0.0f;
-
-    world.init();
 
     while (!WindowShouldClose())
     {
@@ -235,6 +238,8 @@ int main()
             physics_type = Physics::Scaffolding;
             movement_ptr = &scaffolding_movement;
         }
+
+      
         // ---------------------------
         // Mouse input (world space)
         // ---------------------------
@@ -309,13 +314,13 @@ int main()
                 accumulator -= targetDt;
             }
         }
-        else if (step_once)
-        {
-            // Manual frame-by-frame still works
-            world.step();
-            step_once   = false;
-            accumulator = 0; // Reset accumulator to prevent catch-up jumps
-        }
+        // else if (step_once)
+        // {
+        //     // Manual frame-by-frame still works
+        //     world.step();
+        //     step_once   = false;
+        //     accumulator = 0; // Reset accumulator to prevent catch-up jumps
+        // }
 
         // ---------------------------
         // Rendering
@@ -328,55 +333,74 @@ int main()
         // =========================================================
         // Render ONLY active chunks (but camera still sees full world)
         // =========================================================
-        for (int cy = 0; cy < CHUNK_COUNT_Y; cy++)
-        {
-            for (int cx = 0; cx < CHUNK_COUNT_X; cx++)
-            {
+       // Screen corners -> world coordinates
+        Vector2 worldTopLeft =
+            GetScreenToWorld2D({0.0f, 0.0f}, camera);
 
+        Vector2 worldBottomRight =
+            GetScreenToWorld2D(
+                {(float)GetScreenWidth(), (float)GetScreenHeight()},
+                camera);
+
+        // Convert world pixels -> chunk coordinates
+        const int chunkPixelW = CHUNK_SIZE_X * cellSize;
+        const int chunkPixelH = CHUNK_SIZE_Y * cellSize;
+
+        int firstChunkX = (int)std::floor(worldTopLeft.x / chunkPixelW);
+        int firstChunkY = (int)std::floor(worldTopLeft.y / chunkPixelH);
+
+        int lastChunkX = (int)std::floor(worldBottomRight.x / chunkPixelW);
+        int lastChunkY = (int)std::floor(worldBottomRight.y / chunkPixelH);
+
+        // Clamp to existing world
+        firstChunkX = std::clamp(firstChunkX, 0, CHUNK_COUNT_X - 1);
+        firstChunkY = std::clamp(firstChunkY, 0, CHUNK_COUNT_Y - 1);
+
+        lastChunkX = std::clamp(lastChunkX, 0, CHUNK_COUNT_X - 1);
+        lastChunkY = std::clamp(lastChunkY, 0, CHUNK_COUNT_Y - 1);
+
+        // Render only visible chunks
+        for (int cy = firstChunkY; cy <= lastChunkY; cy++)
+        {
+            for (int cx = firstChunkX; cx <= lastChunkX; cx++)
+            {
                 Chunk &chunk = world.chunkManager.chunk_at(cx, cy);
 
                 int base_x = cx * CHUNK_SIZE_X;
                 int base_y = cy * CHUNK_SIZE_Y;
 
-                // Inactive chunk → draw faint background (cheap)
-                // if (chunk.active_index == UINT32_MAX) {
-                //    DrawRectangle(base_x * cellSize, base_y * cellSize,
-                //                  CHUNK_SIZE_X * cellSize,
-                //                  CHUNK_SIZE_Y * cellSize,
-                //                  Color{230, 230, 230, 255});
-                //    continue;
-                //}
-
-                // Active chunk → draw all its cells
                 for (int y = 0; y < CHUNK_SIZE_Y; y++)
                 {
                     for (int x = 0; x < CHUNK_SIZE_X; x++)
                     {
                         ElementType type = chunk.at(x, y).type;
-                        Color       c    = element_to_color(type);
+                        Color c = element_to_color(type);
 
-                        DrawRectangle((base_x + x) * cellSize, (base_y + y) * cellSize, cellSize,
-                                      cellSize, c);
+                        DrawRectangle(
+                            (base_x + x) * cellSize,
+                            (base_y + y) * cellSize,
+                            cellSize,
+                            cellSize,
+                            c);
                     }
                 }
-            }
-        }
 
-        // --- Draw chunk outlines ---
-        for (int y = 0; y < CHUNK_COUNT_Y; y++)
-        {
-            for (int x = 0; x < CHUNK_COUNT_X; x++)
-            {
-                int posx   = x * CHUNK_SIZE_X * cellSize + 1;
-                int posy   = y * CHUNK_SIZE_Y * cellSize + 1;
-                int width  = CHUNK_SIZE_X * cellSize - 1;
+                // Chunk outline
+                int posx  = base_x * cellSize + 1;
+                int posy  = base_y * cellSize + 1;
+                int width = CHUNK_SIZE_X * cellSize - 1;
                 int height = CHUNK_SIZE_Y * cellSize - 1;
 
-                Chunk &chunk = world.chunkManager.chunk_at(x, y);
-                DrawRectangleLines(posx, posy, width, height,
-                                   (chunk.active_index == UINT32_MAX) ? RED : GREEN);
+                DrawRectangleLines(
+                    posx,
+                    posy,
+                    width,
+                    height,
+                    (chunk.active_index == UINT32_MAX) ? RED : GREEN);
             }
         }
+
+       
 
         // --- Draw brush preview ---
         DrawCircleLines(static_cast<int>(mouse_world.x), static_cast<int>(mouse_world.y),

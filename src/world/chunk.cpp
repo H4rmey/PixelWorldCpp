@@ -75,64 +75,64 @@ void Chunk::activate_all_neighbors()
 void Chunk::set_element_local(int x, int y, const Element &e)
 {
     m_elements[index(x, y)] = e;
-    m_world->activate_chunk(*this);
+    // m_world->activate_chunk(*this);
 
-    int cx = m_world_pos_x;
-    int cy = m_world_pos_y;
+    // int cx = m_world_pos_x;
+    // int cy = m_world_pos_y;
 
-    if (x == 0 || x == m_width - 1 || y == 0 || y == m_height - 1)
-    {
-        if (cx > 0)
-        {
-            m_world->activate_chunk(m_world->chunk_at(cx - 1, cy));
-        }
-        if (cx < CHUNK_COUNT_X - 1)
-        {
-            m_world->activate_chunk(m_world->chunk_at(cx + 1, cy));
-        }
-        if (cy > 0)
-        {
-            m_world->activate_chunk(m_world->chunk_at(cx, cy - 1));
-        }
-        if (cy < CHUNK_COUNT_Y - 1)
-        {
-            m_world->activate_chunk(m_world->chunk_at(cx, cy + 1));
-        }
-    }
+    // if (x == 0 || x == m_width - 1 || y == 0 || y == m_height - 1)
+    // {
+    //     if (cx > 0)
+    //     {
+    //         m_world->activate_chunk(m_world->chunk_at(cx - 1, cy));
+    //     }
+    //     if (cx < CHUNK_COUNT_X - 1)
+    //     {
+    //         m_world->activate_chunk(m_world->chunk_at(cx + 1, cy));
+    //     }
+    //     if (cy > 0)
+    //     {
+    //         m_world->activate_chunk(m_world->chunk_at(cx, cy - 1));
+    //     }
+    //     if (cy < CHUNK_COUNT_Y - 1)
+    //     {
+    //         m_world->activate_chunk(m_world->chunk_at(cx, cy + 1));
+    //     }
+    // }
 
-    // Left border affects left neighbor's right border
-    if (x == 0 && cx > 0)
-    {
-        Chunk &left = m_world->chunk_at(cx - 1, cy);
-        m_world->activate_chunk(left);
-        left.mark_dirty(Chunk::m_width - 1, y);
-    }
+    // // Left border affects left neighbor's right border
+    // if (x == 0 && cx > 0)
+    // {
+    //     Chunk &left = m_world->chunk_at(cx - 1, cy);
+    //     m_world->activate_chunk(left);
+    //     left.mark_dirty(Chunk::m_width - 1, y);
+    // }
 
-    // Right border affects right neighbor's left border
-    if (x == m_width - 1 && cx < CHUNK_COUNT_X - 1)
-    {
-        Chunk &right = m_world->chunk_at(cx + 1, cy);
-        m_world->activate_chunk(right);
-        right.mark_dirty(0, y);
-    }
+    // // Right border affects right neighbor's left border
+    // if (x == m_width - 1 && cx < CHUNK_COUNT_X - 1)
+    // {
+    //     Chunk &right = m_world->chunk_at(cx + 1, cy);
+    //     m_world->activate_chunk(right);
+    //     right.mark_dirty(0, y);
+    // }
 
-    // Top border affects upper neighbor's bottom border
-    if (y == 0 && cy > 0)
-    {
-        Chunk &up = m_world->chunk_at(cx, cy - 1);
-        m_world->activate_chunk(up);
-        up.mark_dirty(x, Chunk::m_height - 1);
-    }
+    // // Top border affects upper neighbor's bottom border
+    // if (y == 0 && cy > 0)
+    // {
+    //     Chunk &up = m_world->chunk_at(cx, cy - 1);
+    //     m_world->activate_chunk(up);
+    //     up.mark_dirty(x, Chunk::m_height - 1);
+    // }
 
-    // Bottom border affects lower neighbor's top border
-    if (y == m_height - 1 && cy < CHUNK_COUNT_Y - 1)
-    {
-        Chunk &down = m_world->chunk_at(cx, cy + 1);
-        m_world->activate_chunk(down);
-        down.mark_dirty(x, 0);
-    }
+    // // Bottom border affects lower neighbor's top border
+    // if (y == m_height - 1 && cy < CHUNK_COUNT_Y - 1)
+    // {
+    //     Chunk &down = m_world->chunk_at(cx, cy + 1);
+    //     m_world->activate_chunk(down);
+    //     down.mark_dirty(x, 0);
+    // }
 
-    mark_dirty(x, y);
+    // mark_dirty(x, y);
 }
 
 // Returns the global coordinate of a specific local tile

@@ -1,12 +1,14 @@
 #pragma once
 
-#include "./FastNoiseLite.h"        // Ensure this is in your include path
-#include "./helpers/element_type.h" // Ensure this is in your include path
+#include "./FastNoiseLite.h"
+#include "./helpers/element_type.h"
 #include "world/helpers/constants.h"
+
 #include <algorithm>
 #include <cmath>
-#include <stdint.h>
+#include <cstdint>
 #include <vector>
+#include <fstream>
 
 class WorldGenerator
 {
@@ -26,80 +28,182 @@ class WorldGenerator
         float crustThickness  = 35.0f;
     };
 
-    WorldGenerator() {}
+    WorldGenerator() = default;
+    bool ExportImage(const char *filename) const
+    {
+        std::ofstream file(filename, std::ios::binary);
 
+        if (!file)
+            return false;
+
+        // PPM header
+        file << "P6\n" << m_width << " " << m_height << "\n255\n";
+
+        for (int y = 0; y < m_height; ++y)
+        {
+            for (int x = 0; x < m_width; ++x)
+            {
+                const uint8_t block = GetBlock(x, y);
+
+                unsigned char rgb[3];
+
+                if (block == EmptyMaterial())
+                {
+                    // Air - dark blue/black
+                    rgb[0] = 20;
+                    rgb[1] = 25;
+                    rgb[2] = 35;
+                }
+                else
+                {
+                    // Surface gets green, underground is brown/grey
+                    bool surface =
+                        y > 0 &&
+                        GetBlock(x, y - 1) == EmptyMaterial();
+
+                    if (surface)
+                    {
+                        rgb[0] = 50;
+                        rgb[1] = 160;
+                        rgb[2] = 70;
+                    }
+                    else
+                    {
+                        rgb[0] = 90;
+                        rgb[1] = 80;
+                        rgb[2] = 80;
+                    }
+                }
+
+                file.write(
+                    reinterpret_cast<const char *>(rgb),
+                    sizeof(rgb));
+            }
+        }
+
+        return true;
+    }
     void Generate(const Config &config)
     {
         m_width  = config.width;
         m_height = config.height;
+
         generatedWorld.assign(
-            m_width * m_height,
-            (uint8_t)ElementType::Empty); // Flat 1D array for better cache locality
+            static_cast<size_t>(m_width) *
+                static_cast<size_t>(m_height),
+            EmptyMaterial());
 
         FastNoiseLite noise;
         noise.SetSeed(config.seed);
         noise.SetNoiseType(FastNoiseLite::NoiseType_Perlin);
 
-        float surfaceBaseY = config.height * config.surfaceRatio;
+        // All coordinate scaling is performed explicitly below.
+        noise.SetFrequency(1.0f);
 
-        // 1. Generate Terrain
-        for (int y = 0; y < config.height; y++)
+        const float surfaceBaseY =
+            static_cast<float>(m_height) * config.surfaceRatio;
+
+        // Generate the initial terrain.
+        for (int y = 0; y < m_height; ++y)
         {
-            for (int x = 0; x < config.width; x++)
+            for (int x = 0; x < m_width; ++x)
             {
-                float fx = static_cast<float>(x);
-                float fy = static_cast<float>(y);
+                const float fx = static_cast<float>(x);
+                const float fy = static_cast<float>(y);
 
-                float surfaceY = surfaceBaseY +
-                                 (noise.GetNoise(fx * 0.8f, 0.0f) *
-                                  120.0f) + // Note: FastNoiseLite takes inputs usually unscaled, so
-                                            // we multiply by 1000 for standard scale matching
-                                 (noise.GetNoise(fx * 5.0f, 0.0f) * 10.0f);
+                const float surfaceY =
+                    surfaceBaseY +
+                    noise.GetNoise(
+                        fx * 0.0008f,
+                        0.0f) *
+                        120.0f +
+                    noise.GetNoise(
+                        fx * 0.005f,
+                        0.0f) *
+                        10.0f;
 
+                // Everything above the surface is empty sky.
                 if (fy < surfaceY)
                 {
-                    SetBlock(x, y, (uint8_t)ElementType::Empty);
+                    SetBlock(x, y, EmptyMaterial());
                     continue;
                 }
 
-                float depth = fy - surfaceY;
+                const float depth = fy - surfaceY;
 
-                float qx = std::floor(fx / config.blockSize) * config.blockSize;
-                float qy = std::floor(fy / config.blockSize) * config.blockSize;
+                const float safeBlockSize =
+                    std::max(1.0f, config.blockSize);
 
-                // Tunnels
-                float tunnelNoise     = getFBm(noise, qx * 15.0f, qy * 40.0f, 2);
-                float tunnelThickness = 0.04f;
-                bool  isAir           = std::abs(tunnelNoise) < tunnelThickness;
+                const float qx =
+                    std::floor(fx / safeBlockSize) *
+                    safeBlockSize;
 
-                // Pitfalls
+                const float qy =
+                    std::floor(fy / safeBlockSize) *
+                    safeBlockSize;
+
+                // Horizontal and irregular tunnels.
+                const float tunnelNoise = GetFBm(
+                    noise,
+                    qx * 0.015f,
+                    qy * 0.04f,
+                    2);
+
+                constexpr float tunnelThickness = 0.04f;
+
+                bool isAir =
+                    std::abs(tunnelNoise) < tunnelThickness;
+
+                // Mostly vertical passages.
                 if (config.enablePitfalls)
                 {
-                    float pitfallNoise = getFBm(noise, qx * 36.0f, qy * 5.0f, 2);
+                    const float pitfallNoise = GetFBm(
+                        noise,
+                        qx * 0.036f,
+                        qy * 0.005f,
+                        2);
+
                     if (std::abs(pitfallNoise) < 0.015f)
                     {
                         isAir = true;
                     }
                 }
 
-                // Caverns
-                float cavernNoise = getFBm(noise, qx * 20.0f, qy * 20.0f, 2);
+                // Larger cavern areas.
+                const float cavernNoise = GetFBm(
+                    noise,
+                    qx * 0.02f,
+                    qy * 0.02f,
+                    2);
+
                 if (cavernNoise > 0.75f)
                 {
                     isAir = true;
                 }
 
-                // Crust Layer Check
-                float crustNoiseValue = (noise.GetNoise(fx * 1.0f, 100000.0f) + 1.0f) / 2.0f;
-                float crustCurrentThickness =
-                    (config.crustThickness - 15.0f) + (crustNoiseValue * 30.0f);
+                // Variable solid crust directly below the surface.
+                const float crustNoiseValue =
+                    (noise.GetNoise(
+                         fx * 0.001f,
+                         100.0f) +
+                     1.0f) /
+                    2.0f;
+
+                const float crustCurrentThickness =
+                    (config.crustThickness - 15.0f) +
+                    crustNoiseValue * 30.0f;
 
                 if (depth < crustCurrentThickness)
                 {
                     if (config.enableEntrances)
                     {
-                        float entranceNoise = noise.GetNoise(qx * 3.0f, qy * 20.0f);
-                        isAir               = (std::abs(entranceNoise) < 0.03f);
+                        const float entranceNoise =
+                            noise.GetNoise(
+                                qx * 0.003f,
+                                qy * 0.02f);
+
+                        isAir =
+                            std::abs(entranceNoise) < 0.03f;
                     }
                     else
                     {
@@ -107,131 +211,215 @@ class WorldGenerator
                     }
                 }
 
-                SetBlock(x, y, isAir ? (uint8_t)ElementType::Empty : (uint8_t)ElementType::Sand);
+                SetBlock(
+                    x,
+                    y,
+                    isAir ? EmptyMaterial() : SolidMaterial());
             }
         }
 
-        // 2. Apply Cellular Automata Smoothing
         if (config.caIterations > 0)
         {
-            applyCellularAutomata(config);
+            ApplyCellularAutomata(config);
         }
     }
 
     uint8_t GetBlock(int x, int y) const
     {
-        if (x < 0 || x >= m_width || y < 0 || y >= m_height)
+        if (x < 0 || x >= m_width ||
+            y < 0 || y >= m_height)
         {
-            return (uint8_t)ElementType::Sand;
+            return SolidMaterial();
         }
-        return generatedWorld[y * m_width + x];
+
+        return generatedWorld[
+            static_cast<size_t>(y) *
+                static_cast<size_t>(m_width) +
+            static_cast<size_t>(x)];
     }
 
-    const std::vector<uint8_t> &GetWorldData() const { return generatedWorld; }
+    const std::vector<uint8_t> &GetWorldData() const
+    {
+        return generatedWorld;
+    }
 
   private:
     int m_width  = 0;
     int m_height = 0;
 
-    void SetBlock(int x, int y, uint8_t material) { generatedWorld[y * m_width + x] = material; }
-
-    // Helper to match the manual FBm loop from the Go code using FastNoiseLite's base noise.
-    // We scale the frequency inputs up because FastNoiseLite expects larger coordinate values than
-    // the custom Go Perlin.
-    float getFBm(FastNoiseLite &noise, float x, float y, int octaves)
+    static constexpr uint8_t EmptyMaterial()
     {
-        float total = 0.0f;
-        float freq  = 1.0f;
-        float amp   = 1.0f;
-        float max   = 0.0f;
-
-        for (int i = 0; i < octaves; i++)
-        {
-            total += noise.GetNoise(x * freq, y * freq) * amp;
-            max += amp;
-            amp *= 0.5f;
-            freq *= 2.0f;
-        }
-        return total / max;
+        return static_cast<uint8_t>(ElementType::Empty);
     }
 
-    void applyCellularAutomata(const Config &config)
+    static constexpr uint8_t SolidMaterial()
     {
-        int                  bSize  = std::max(1, static_cast<int>(config.blockSize));
-        std::vector<uint8_t> buffer = generatedWorld;
+        return static_cast<uint8_t>(ElementType::Sand);
+    }
 
-        for (int i = 0; i < config.caIterations; i++)
+    void SetBlock(int x, int y, uint8_t material)
+    {
+        generatedWorld[
+            static_cast<size_t>(y) *
+                static_cast<size_t>(m_width) +
+            static_cast<size_t>(x)] = material;
+    }
+
+    float GetFBm(
+        FastNoiseLite &noise,
+        float x,
+        float y,
+        int octaves) const
+    {
+        float total     = 0.0f;
+        float frequency = 1.0f;
+        float amplitude = 1.0f;
+        float maximum   = 0.0f;
+
+        for (int octave = 0; octave < octaves; ++octave)
         {
-            for (int y = 0; y < m_height; y += bSize)
-            {
-                for (int x = 0; x < m_width; x += bSize)
-                {
+            total +=
+                noise.GetNoise(
+                    x * frequency,
+                    y * frequency) *
+                amplitude;
 
-                    // Skip sky to save performance
-                    if (GetBlock(x, y) == (uint8_t)ElementType::Empty &&
-                        y < static_cast<int>(m_height * 0.4f) - 150)
+            maximum += amplitude;
+            amplitude *= 0.5f;
+            frequency *= 2.0f;
+        }
+
+        if (maximum == 0.0f)
+        {
+            return 0.0f;
+        }
+
+        return total / maximum;
+    }
+
+    void ApplyCellularAutomata(const Config &config)
+    {
+        const int blockSize = std::max(
+            1,
+            static_cast<int>(config.blockSize));
+
+        const int skySkipLimit =
+            static_cast<int>(
+                static_cast<float>(m_height) *
+                config.surfaceRatio) -
+            150;
+
+        for (int iteration = 0;
+             iteration < config.caIterations;
+             ++iteration)
+        {
+            // Read from generatedWorld and write to this buffer.
+            std::vector<uint8_t> buffer = generatedWorld;
+
+            for (int y = 0;
+                 y < m_height;
+                 y += blockSize)
+            {
+                for (int x = 0;
+                     x < m_width;
+                     x += blockSize)
+                {
+                    const uint8_t currentState =
+                        GetBlock(x, y);
+
+                    // Skip empty blocks high above the surface.
+                    if (currentState == EmptyMaterial() &&
+                        y < skySkipLimit)
                     {
                         continue;
                     }
 
                     int wallCount = 0;
 
-                    // Check 3x3 neighbors
-                    for (int dy = -1; dy <= 1; dy++)
+                    for (int dy = -1; dy <= 1; ++dy)
                     {
-                        for (int dx = -1; dx <= 1; dx++)
+                        for (int dx = -1; dx <= 1; ++dx)
                         {
-                            if (dy == 0 && dx == 0)
+                            if (dx == 0 && dy == 0)
                             {
                                 continue;
                             }
 
-                            int nx = x + (dx * bSize);
-                            int ny = y + (dy * bSize);
+                            const int neighborX =
+                                x + dx * blockSize;
 
-                            if (nx < 0 || ny < 0 || nx >= m_width || ny >= m_height)
+                            const int neighborY =
+                                y + dy * blockSize;
+
+                            if (neighborX < 0 ||
+                                neighborX >= m_width ||
+                                neighborY < 0 ||
+                                neighborY >= m_height)
                             {
-                                wallCount++;
+                                ++wallCount;
                             }
-                            else if (GetBlock(nx, ny) == (uint8_t)ElementType::Sand)
+                            else if (
+                                GetBlock(
+                                    neighborX,
+                                    neighborY) ==
+                                SolidMaterial())
                             {
-                                wallCount++;
+                                ++wallCount;
                             }
                         }
                     }
 
-                    uint8_t currentState = GetBlock(x, y);
-                    uint8_t newState     = currentState;
+                    uint8_t newState = currentState;
 
-                    if (currentState == (uint8_t)ElementType::Sand)
+                    if (currentState == SolidMaterial())
                     {
+                        // Remove isolated solid blocks.
                         if (wallCount < 4)
                         {
-                            newState = (uint8_t)ElementType::Empty;
+                            newState = EmptyMaterial();
                         }
                     }
                     else
                     {
+                        // Fill isolated empty blocks.
                         if (wallCount >= 5)
                         {
-                            newState = (uint8_t)ElementType::Sand;
+                            newState = SolidMaterial();
                         }
                     }
 
-                    // Apply the new state in chunks to preserve the blocky aesthetic
-                    for (int by = 0; by < bSize; by++)
+                    // Apply the state to the complete block.
+                    for (int blockY = 0;
+                         blockY < blockSize;
+                         ++blockY)
                     {
-                        for (int bx = 0; bx < bSize; bx++)
+                        for (int blockX = 0;
+                             blockX < blockSize;
+                             ++blockX)
                         {
-                            if (y + by < m_height && x + bx < m_width)
+                            const int targetX =
+                                x + blockX;
+
+                            const int targetY =
+                                y + blockY;
+
+                            if (targetX >= m_width ||
+                                targetY >= m_height)
                             {
-                                buffer[(y + by) * m_width + (x + bx)] = newState;
+                                continue;
                             }
+
+                            buffer[
+                                static_cast<size_t>(targetY) *
+                                    static_cast<size_t>(m_width) +
+                                static_cast<size_t>(targetX)] =
+                                newState;
                         }
                     }
                 }
             }
-            generatedWorld = buffer;
+
+            generatedWorld.swap(buffer);
         }
     }
 };
