@@ -6,9 +6,9 @@
 #include "world/movementSystems.hpp"
 #include "world/world.hpp"
 #include <algorithm>
+#include <cmath>
 #include <iostream>
 #include <raylib.h>
-#include <cmath>
 
 Color element_to_color(ElementType type)
 {
@@ -50,7 +50,7 @@ int main()
 
     // world + movement systems
     printf("Start: creating world\n");
-    World        world = World();
+    World world = World();
     world.init();
     printf("Done: creating world\n");
 
@@ -239,7 +239,6 @@ int main()
             movement_ptr = &scaffolding_movement;
         }
 
-      
         // ---------------------------
         // Mouse input (world space)
         // ---------------------------
@@ -310,17 +309,17 @@ int main()
             // While we have enough time accumulated, run a physics step
             while (accumulator >= targetDt)
             {
-                world.step();
+                world.chunkManager.step();
                 accumulator -= targetDt;
             }
         }
-        // else if (step_once)
-        // {
-        //     // Manual frame-by-frame still works
-        //     world.step();
-        //     step_once   = false;
-        //     accumulator = 0; // Reset accumulator to prevent catch-up jumps
-        // }
+        else if (step_once)
+        {
+            // Manual frame-by-frame still works
+            world.chunkManager.step();
+            step_once   = false;
+            accumulator = 0; // Reset accumulator to prevent catch-up jumps
+        }
 
         // ---------------------------
         // Rendering
@@ -333,14 +332,11 @@ int main()
         // =========================================================
         // Render ONLY active chunks (but camera still sees full world)
         // =========================================================
-       // Screen corners -> world coordinates
-        Vector2 worldTopLeft =
-            GetScreenToWorld2D({0.0f, 0.0f}, camera);
+        // Screen corners -> world coordinates
+        Vector2 worldTopLeft = GetScreenToWorld2D({0.0f, 0.0f}, camera);
 
         Vector2 worldBottomRight =
-            GetScreenToWorld2D(
-                {(float)GetScreenWidth(), (float)GetScreenHeight()},
-                camera);
+            GetScreenToWorld2D({(float)GetScreenWidth(), (float)GetScreenHeight()}, camera);
 
         // Convert world pixels -> chunk coordinates
         const int chunkPixelW = CHUNK_SIZE_X * cellSize;
@@ -374,33 +370,23 @@ int main()
                     for (int x = 0; x < CHUNK_SIZE_X; x++)
                     {
                         ElementType type = chunk.at(x, y).type;
-                        Color c = element_to_color(type);
+                        Color       c    = element_to_color(type);
 
-                        DrawRectangle(
-                            (base_x + x) * cellSize,
-                            (base_y + y) * cellSize,
-                            cellSize,
-                            cellSize,
-                            c);
+                        DrawRectangle((base_x + x) * cellSize, (base_y + y) * cellSize, cellSize,
+                                      cellSize, c);
                     }
                 }
 
                 // Chunk outline
-                int posx  = base_x * cellSize + 1;
-                int posy  = base_y * cellSize + 1;
-                int width = CHUNK_SIZE_X * cellSize - 1;
+                int posx   = base_x * cellSize + 1;
+                int posy   = base_y * cellSize + 1;
+                int width  = CHUNK_SIZE_X * cellSize - 1;
                 int height = CHUNK_SIZE_Y * cellSize - 1;
 
-                DrawRectangleLines(
-                    posx,
-                    posy,
-                    width,
-                    height,
-                    (chunk.active_index == UINT32_MAX) ? RED : GREEN);
+                DrawRectangleLines(posx, posy, width, height,
+                                   (chunk.active_index == UINT32_MAX) ? RED : GREEN);
             }
         }
-
-       
 
         // --- Draw brush preview ---
         DrawCircleLines(static_cast<int>(mouse_world.x), static_cast<int>(mouse_world.y),
