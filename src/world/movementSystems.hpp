@@ -155,6 +155,7 @@ class SandMovement : public IMovement
                 if (fastRandomBool(neighbor.physics.stability))
                 {
                     neighbor.physics.canMove_x = true;
+                    neighbor.physics.canMove_y = true;
                 }
             }
         };

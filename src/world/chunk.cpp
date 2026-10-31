@@ -1,6 +1,7 @@
 #include "chunk.hpp"
 #include "chunkManager.hpp"
 #include "helpers/constants.h"
+#include "helpers/move_decision.h"
 #include "movement/IMovement.h"
 #include <random>
 #include <raylib.h>
@@ -209,7 +210,10 @@ std::vector<MoveDecision> &Chunk::process_movement(uint8_t tick, bool bias)
                     continue;
                 }
 
-                MoveDecision d = m_elements[index(x, y)].movement->process(tick, x, y, *this);
+                int              i = index(x, y);
+                Element          e = m_elements[index(x, y)];
+                const IMovement *m = e.movement;
+                MoveDecision     d = m->process(tick, x, y, *this);
 
                 if (d.move_type != MoveType::Stay)
                 {
