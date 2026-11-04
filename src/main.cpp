@@ -271,6 +271,25 @@ int main()
                             IMovement  *move_ptr    = erase ? &empty_movement : movement_ptr;
                             RenderLayer matterstate = erase ? RenderLayer::None : matter_state;
                             Physics     physics_type_to_set = erase ? Physics::Empty : physics_type;
+                            Chunk      &chunk               = world.chunkManager.chunk_at(cx, cy);
+
+                            if (type_to_set == ElementType::Empty)
+                            {
+                                int dx[] = {0, 0, -1, 1};
+                                int dy[] = {-1, 1, 0, 0};
+
+                                for (int i = 0; i < 4; ++i)
+                                {
+                                    int neighbor_gx = gx + dx[i];
+                                    int neighbor_gy = gy + dy[i];
+
+                                    Element &neighbor =
+                                        chunk.get_element_global(neighbor_gx, neighbor_gy);
+
+                                    neighbor.physics.canMove_x = true;
+                                    neighbor.physics.canMove_y = true;
+                                }
+                            }
 
                             world.chunkManager.chunk_at(cx, cy).set_element_local(
                                 lx, ly,
