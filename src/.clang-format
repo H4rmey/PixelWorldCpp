@@ -1,7 +1,0 @@
-AlignConsecutiveAssignments: true
-AlignConsecutiveDeclarations: true
-BasedOnStyle: LLVM
-BreakBeforeBraces: Allman
-IndentWidth: 4
-InsertBraces: true
-ColumnLimit: 100
