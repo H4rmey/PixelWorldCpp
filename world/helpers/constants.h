@@ -15,8 +15,8 @@ static constexpr int GRAVITY       = 32;
 static constexpr int CELL_SIZE     = 4;
 static constexpr int BRUSH_SIZE    = 1;
 
-static constexpr std::size_t WORLD_SIZE_X = 6400;
-static constexpr std::size_t WORLD_SIZE_Y = 1600;
+static constexpr std::size_t WORLD_SIZE_X = 1280;
+static constexpr std::size_t WORLD_SIZE_Y = 768;
 
 static constexpr int CHUNK_COUNT_X = WORLD_SIZE_X / CHUNK_SIZE_Y;
 static constexpr int CHUNK_COUNT_Y = WORLD_SIZE_Y / CHUNK_SIZE_Y;

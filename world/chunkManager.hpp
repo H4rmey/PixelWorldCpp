@@ -44,6 +44,8 @@ class ChunkManager
     const std::vector<Chunk *> &get_active_chunks() const { return m_active_chunks; }
 
     // Map global cell coordinates to chunk + local coords
+    std::array<Chunk, CHUNK_COUNT> &get_chunks() { return m_chunks; }
+    std::vector<Point>              get_changed_pixels() { return m_changed_pixels; }
     bool get_chunk_for_global_cell(int gx, int gy, int &out_x, int &out_y, int &out_lx,
                                    int &out_ly) const;
 

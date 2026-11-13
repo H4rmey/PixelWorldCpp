@@ -3,7 +3,7 @@ CXX = clang++
 CXXFLAGS = -std=c++23 -g -O0 -fno-omit-frame-pointer -DNOMINMAX -I.
 
 # Linker flags for your libraries
-LDFLAGS = -lraylib -lenet
+LDFLAGS = -lenet -lsfml-graphics -lsfml-window -lsfml-system
 
 # Output executable names
 SERVER_BIN = server_app

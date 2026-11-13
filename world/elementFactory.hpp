@@ -14,8 +14,8 @@ class ElementFactory
     static inline SandMovement        sand_movement;
     static inline SolidMovement       solid_movement;
     static inline GasMovement         gas_movement;
-    static inline LiquidMovement      liquid_movement; // Fixed from WaterMovement
-    static inline EmptyMovement       empty_movement;  // Added to replace nullptr
+    static inline LiquidMovement      liquid_movement;
+    static inline EmptyMovement       empty_movement;
 
   public:
     // ---------------------------------------------------------
@@ -24,8 +24,8 @@ class ElementFactory
 
     static Element create_empty()
     {
-        // Passed &empty_movement instead of nullptr
-        return Element(RenderLayer::None, ElementType::Empty, 0x00000000, &empty_movement,
+        // 0x828282FF = Gray (130, 130, 130, 255)
+        return Element(RenderLayer::None, ElementType::Empty, 0x828282FF, &empty_movement,
                        Physics::Empty);
     }
 
@@ -34,43 +34,48 @@ class ElementFactory
         Physics p   = Physics::Sand;
         p.canMove_x = false;
         p.canMove_y = false;
-        return Element(RenderLayer::Solid, ElementType::Sand, 0xFFC2B280, &sand_movement, p);
+        // 0xC2B280FF = Sand/Tan
+        return Element(RenderLayer::Solid, ElementType::Sand, 0xC2B280FF, &sand_movement, p);
     }
 
     static Element create_water()
     {
-        return Element(RenderLayer::Liquid, ElementType::Water, 0x994444FF, &liquid_movement,
+        // 0x4444FFFF = Blue
+        return Element(RenderLayer::Liquid, ElementType::Water, 0x4444FFFF, &liquid_movement,
                        Physics::Water);
     }
 
     static Element create_stone()
     {
-        return Element(RenderLayer::Solid, ElementType::Stone, 0xFF888888, &solid_movement,
+        // 0x888888FF = Dark Gray
+        return Element(RenderLayer::Solid, ElementType::Stone, 0x888888FF, &solid_movement,
                        Physics::Stone);
     }
 
     static Element create_gas()
     {
-        return Element(RenderLayer::Gas, ElementType::Gas, 0x55DDDDDD, &gas_movement, Physics::Gas);
+        // 0x55DDDDFF = Light Cyan/Greenish
+        return Element(RenderLayer::Gas, ElementType::Gas, 0x55DDDDFF, &gas_movement, Physics::Gas);
     }
 
     static Element create_scaffolding()
     {
-        return Element(RenderLayer::Solid, ElementType::Scaffolding, 0xFF8B4513,
+        // 0x8B4513FF = Brown
+        return Element(RenderLayer::Solid, ElementType::Scaffolding, 0x8B4513FF,
                        &scaffolding_movement, Physics::Scaffolding);
     }
 
     static Element create_bedrock()
     {
-        // Mirrors KEY_SIX in main.cpp
-        return Element(RenderLayer::Solid, ElementType::Bedrock, 0xFF000000, &empty_movement,
+        // 0x000000FF = Black
+        return Element(RenderLayer::Solid, ElementType::Bedrock, 0x000000FF, &empty_movement,
                        Physics::Empty);
     }
 
     static Element create_custom()
     {
-        // Mirrors KEY_FIVE in main.cpp
-        return Element(RenderLayer::None, ElementType::Custom, 0xFF800080, &empty_movement,
+        // 0x800080FF = Purple
+        return Element(RenderLayer::None, ElementType::Custom, 0x800080FF, &empty_movement,
                        Physics::Empty);
     }
 
@@ -83,8 +88,8 @@ class ElementFactory
         Physics p  = Physics::Stone;
         p.hardness = 800;
         p.mass     = 50;
-
-        return Element(RenderLayer::Solid, ElementType::Stone, 0xFF444444, &solid_movement, p);
+        // 0x444444FF = Very Dark Gray
+        return Element(RenderLayer::Solid, ElementType::Stone, 0x444444FF, &solid_movement, p);
     }
 
     static Element create_pumice()
@@ -93,8 +98,8 @@ class ElementFactory
         p.hardness = 100;
         p.mass     = 15;
         p.density  = 50;
-
-        return Element(RenderLayer::Solid, ElementType::Stone, 0xFFBBBBBB, &solid_movement, p);
+        // 0xBBBBBBFF = Light Gray
+        return Element(RenderLayer::Solid, ElementType::Stone, 0xBBBBBBFF, &solid_movement, p);
     }
 
     // ---------------------------------------------------------
