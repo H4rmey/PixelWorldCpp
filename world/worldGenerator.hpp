@@ -20,9 +20,9 @@ class WorldGenerator
         int   width           = WORLD_SIZE_X;
         int   height          = WORLD_SIZE_Y;
         int   seed            = 123456789;
-        float surfaceRatio    = 0.4f;
-        float blockSize       = 4.0f;
-        int   caIterations    = 2;
+        float surfaceRatio    = 0.2f;
+        float blockSize       = 2.0f;
+        int   caIterations    = 1;
         bool  enablePitfalls  = true;
         bool  enableEntrances = true;
         float crustThickness  = 35.0f;

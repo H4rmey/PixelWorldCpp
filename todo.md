@@ -10,11 +10,20 @@
 - [x] more elements types
 - [x] Pixels make other pixels fall (stability)
 - [x] make huge worlds possible --> the issue was the rendering (only render what is visible was the solution)
-- [ ] migration to godot
+- [x] cleanup some of the matterstate, physics and element types (more clearity between them)
+- [x] base world generation system
+- [ ] migrate to smfl3 instead of raylib
+- [ ] add player character
+- [ ] add simple menu handler
+- [ ] add camera system
+- [ ] add brush system
+- [ ] add keybind system
+- [ ] add keybind system
+- [ ] add trees and bushes that grow (organic stuff)
+- [ ] add debugg toggle(s)
+- [ ] add more different materials (ores, gasses, rock types)
+- [ ] add collision system (box2d)
+- [ ] add physics system for particles
 - [ ] add marching squares for obtaining outline of chunk for collisions
-- [ ] cleanup some of the matterstate, physics and element types (more clearity between them)
 - [ ] add temperature system to element/physics + interactions for that
 - [ ] electricity system (wires and stuff)
-- [ ] better gui
-- [ ] add trees and bushes that grow
-- [ ] world generation system

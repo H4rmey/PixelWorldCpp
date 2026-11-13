@@ -13,10 +13,11 @@ class ChunkManager
     static constexpr std::size_t m_size = CHUNK_COUNT;
 
     std::array<Chunk, CHUNK_COUNT>           m_chunks;
-    std::vector<Chunk *>                     m_active_chunks;
     std::vector<std::vector<MoveDecision> *> m_decision_ptrs;
     std::vector<MoveDecision>                m_cross;
+    std::vector<Chunk *>                     m_active_chunks;
     std::vector<Chunk *>                     m_chunks_to_deactivate;
+    std::vector<Point>                       m_changed_pixels;
 
     Chunk   m_bedrock_chunk;
     Element m_empty_element;

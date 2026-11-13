@@ -124,5 +124,8 @@ class Chunk
     void get_global_coords(int local_x, int local_y, int &out_global_x, int &out_global_y) const;
 
     std::vector<MoveDecision> &process_movement(uint8_t tick, bool bias);
-    std::vector<MoveDecision>  apply_decisions(std::vector<MoveDecision> &decisions);
+
+    void apply_decisions(std::vector<MoveDecision> &decisions,
+                         std::vector<MoveDecision> &out_of_bounds,
+                         std::vector<Point>        &changed_pixels);
 };

@@ -289,7 +289,9 @@ std::vector<MoveDecision> &Chunk::process_movement(uint8_t tick, bool bias)
     return m_decisions;
 }
 
-std::vector<MoveDecision> Chunk::apply_decisions(std::vector<MoveDecision> &decisions)
+void Chunk::apply_decisions(std::vector<MoveDecision> &decisions,
+                            std::vector<MoveDecision> &out_of_bounds,
+                            std::vector<Point>        &changed_pixels)
 {
     // 1. Initialize the random engine
     static std::random_device rd;
@@ -299,8 +301,6 @@ std::vector<MoveDecision> Chunk::apply_decisions(std::vector<MoveDecision> &deci
     std::shuffle(decisions.begin(), decisions.end(), g);
 
     // 3. Prepare the return vector
-    std::vector<MoveDecision> out_of_bounds;
-    out_of_bounds.reserve(decisions.size() / 8);
 
     static thread_local std::vector<uint8_t> used;
     used.assign(m_width * m_height, 0);
@@ -380,7 +380,13 @@ std::vector<MoveDecision> Chunk::apply_decisions(std::vector<MoveDecision> &deci
         notify_border_change(d.old_x, d.old_y);
         notify_border_change(d.new_x, d.new_y);
         // ------------------------------------------
-    }
 
-    return out_of_bounds;
+        // finally store the changed pixels
+        Point oldP = {d.old_x, d.old_y};
+        Point newP = {d.old_x, d.old_y};
+        get_global_coords(d.old_x, d.old_y, oldP.x, oldP.y);
+        get_global_coords(d.new_x, d.new_y, newP.x, newP.y);
+        changed_pixels.push_back(oldP);
+        changed_pixels.push_back(newP);
+    }
 }

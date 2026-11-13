@@ -181,6 +181,8 @@ bool ChunkManager::get_chunk_for_global_cell(int gx, int gy, int &out_x, int &ou
 
 void ChunkManager::step()
 {
+    m_changed_pixels.clear();
+
     // Activate any chunks written to between frames (e.g. mouse input)
     process_activations();
 
@@ -228,13 +230,16 @@ void ChunkManager::step()
     //  apply in-chunk decisions
     for (size_t i = 0; i < active_count; ++i)
     {
-        Chunk                     *c         = m_active_chunks[i];
-        std::vector<MoveDecision> &decisions = *m_decision_ptrs[i];
-        std::vector<MoveDecision>  outside   = c->apply_decisions(decisions);
+        Chunk *c = m_active_chunks[i];
 
-        if (!outside.empty())
+        std::vector<MoveDecision>  out_of_chunk_bounds;
+        std::vector<MoveDecision> &decisions = *m_decision_ptrs[i];
+
+        c->apply_decisions(decisions, out_of_chunk_bounds, m_changed_pixels);
+
+        if (!out_of_chunk_bounds.empty())
         {
-            m_cross.insert(m_cross.end(), outside.begin(), outside.end());
+            m_cross.insert(m_cross.end(), out_of_chunk_bounds.begin(), out_of_chunk_bounds.end());
         }
     }
 
@@ -280,7 +285,6 @@ void ChunkManager::apply_cross_chunk_swaps(const std::vector<MoveDecision> &cros
     // Per-chunk used masks (byte-per-cell, fast)
     static std::vector<uint8_t> used;
     used.assign(CHUNK_COUNT_X * CHUNK_COUNT_Y * cells_per_chunk, 0);
-
     auto used_for = [&](int cx, int cy) -> uint8_t *
     { return used.data() + (cy * CHUNK_COUNT_X + cx) * cells_per_chunk; };
 
@@ -295,16 +299,14 @@ void ChunkManager::apply_cross_chunk_swaps(const std::vector<MoveDecision> &cros
         const int base_gx = d.origin_cx * W;
         const int base_gy = d.origin_cy * H;
 
-        const int old_gx = base_gx + d.old_x;
-        const int old_gy = base_gy + d.old_y;
-        const int new_gx = base_gx + d.new_x;
-        const int new_gy = base_gy + d.new_y;
+        Point oldP = {base_gx + d.old_x, base_gy + d.old_y};
+        Point newP = {base_gx + d.new_x, base_gy + d.new_y};
 
         //  Map GLOBAL -> owning chunk + local coords (works for negatives)
-        const int old_cx = floor_div(old_gx, W);
-        const int old_cy = floor_div(old_gy, H);
-        const int new_cx = floor_div(new_gx, W);
-        const int new_cy = floor_div(new_gy, H);
+        const int old_cx = floor_div(oldP.x, W);
+        const int old_cy = floor_div(oldP.y, H);
+        const int new_cx = floor_div(newP.x, W);
+        const int new_cy = floor_div(newP.y, H);
 
         // If you only simulate a fixed grid of chunks, skip moves that leave
         // the world:
@@ -316,10 +318,10 @@ void ChunkManager::apply_cross_chunk_swaps(const std::vector<MoveDecision> &cros
             continue;
         }
 
-        const int old_lx = floor_mod(old_gx, W);
-        const int old_ly = floor_mod(old_gy, H);
-        const int new_lx = floor_mod(new_gx, W);
-        const int new_ly = floor_mod(new_gy, H);
+        const int old_lx = floor_mod(oldP.x, W);
+        const int old_ly = floor_mod(oldP.y, H);
+        const int new_lx = floor_mod(newP.x, W);
+        const int new_ly = floor_mod(newP.y, H);
 
         //  Conflict protection (each cell max once)
         uint8_t *used_old = used_for(old_cx, old_cy);
@@ -347,5 +349,9 @@ void ChunkManager::apply_cross_chunk_swaps(const std::vector<MoveDecision> &cros
 
         c_old.mark_dirty(old_lx, old_ly);
         c_new.mark_dirty(new_lx, new_ly);
+
+        // finally store the changed pixels
+        m_changed_pixels.push_back(oldP);
+        m_changed_pixels.push_back(newP);
     }
 }

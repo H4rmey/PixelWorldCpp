@@ -275,13 +275,15 @@ int main()
 
                             if (type_to_set == ElementType::Empty)
                             {
-                                int dx[] = {0, 0, -1, 1};
-                                int dy[] = {-1, 1, 0, 0};
+                                // Renamed to avoid shadowing outer dx/dy
+                                int offset_x[] = {0, 0, -1, 1};
+                                int offset_y[] = {-1, 1, 0, 0};
 
                                 for (int i = 0; i < 4; ++i)
                                 {
-                                    int neighbor_gx = gx + dx[i];
-                                    int neighbor_gy = gy + dy[i];
+                                    // Use px and py (the current grid cell), not gx and gy!
+                                    int neighbor_gx = px + offset_x[i];
+                                    int neighbor_gy = py + offset_y[i];
 
                                     Element &neighbor =
                                         chunk.get_element_global(neighbor_gx, neighbor_gy);
