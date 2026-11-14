@@ -1,6 +1,9 @@
 #include "network_protocol.h"
+#include "world/elementFactory.hpp"
+#include "world/helpers/constants.h"
 #include "world/movementSystems.hpp"
 #include "world/world.hpp"
+#include <SFML/Graphics.hpp>
 #include <chrono>
 #include <enet/enet.h>
 #include <iostream>
@@ -8,22 +11,55 @@
 
 int main()
 {
-    enet_initialize();
+    if (enet_initialize() != 0)
+    {
+        std::cerr << "An error occurred while initializing ENet.\n";
+        return EXIT_FAILURE;
+    }
+    atexit(enet_deinitialize);
+
     ENetAddress address = {ENET_HOST_ANY, 1234};
     ENetHost   *server  = enet_host_create(&address, 32, 2, 0, 0);
 
-    // Initialize World & Movement Systems
+    // Initialize World
     World world;
     world.init();
 
-    SandMovement        sand_movement;
-    SolidMovement       solid_movement;
-    GasMovement         gas_movement;
-    LiquidMovement      liquid_movement;
-    EmptyMovement       empty_movement;
-    ScaffoldingMovement scaffolding_movement;
+    // ---------------------------------------------------------
+    // Server Debug Window Setup
+    // ---------------------------------------------------------
+    sf::RenderWindow serverWindow(sf::VideoMode(WINDOW_SIZE_X, WINDOW_SIZE_Y),
+                                  "Server Authoritative View");
+    serverWindow.setFramerateLimit(MAX_FRAMERATE);
+    sf::View camera = serverWindow.getDefaultView();
 
-    // A helper to map ElementType back to the correct movement/physics/render pointers
+    // Preallocate server's visual representation of the pixels
+    sf::VertexArray worldPixels(sf::Quads, WORLD_SIZE_X * WORLD_SIZE_Y * 4);
+    for (int y = 0; y < WORLD_SIZE_Y; ++y)
+    {
+        for (int x = 0; x < WORLD_SIZE_X; ++x)
+        {
+            int   idx = (y * WORLD_SIZE_X + x) * 4;
+            float fx  = x * CELL_SIZE;
+            float fy  = y * CELL_SIZE;
+
+            worldPixels[idx + 0].position = sf::Vector2f(fx, fy);
+            worldPixels[idx + 1].position = sf::Vector2f(fx + CELL_SIZE, fy);
+            worldPixels[idx + 2].position = sf::Vector2f(fx + CELL_SIZE, fy + CELL_SIZE);
+            worldPixels[idx + 3].position = sf::Vector2f(fx, fy + CELL_SIZE);
+
+            // Default color matching Empty element (0x828282FF from the factory)
+            sf::Color defaultColor(0x828282FF);
+            worldPixels[idx + 0].color = defaultColor;
+            worldPixels[idx + 1].color = defaultColor;
+            worldPixels[idx + 2].color = defaultColor;
+            worldPixels[idx + 3].color = defaultColor;
+        }
+    }
+
+    // Buffer to hold pixels placed by the mouse so they can be broadcast alongside physics
+    std::vector<Point> manual_brush_changes;
+
     auto apply_brush = [&](int gx, int gy, int b_size, ElementType b_type, bool erase)
     {
         for (int dy = -b_size; dy <= b_size; dy++)
@@ -39,48 +75,8 @@ int main()
                     if (world.chunkManager.get_chunk_for_global_cell(px, py, cx, cy, lx, ly))
                     {
                         ElementType type_to_set = erase ? ElementType::Empty : b_type;
+                        Chunk      &chunk       = world.chunkManager.chunk_at(cx, cy);
 
-                        IMovement  *move_ptr     = &empty_movement;
-                        RenderLayer matter_state = RenderLayer::None;
-                        Physics     physics_type = Physics::Empty;
-
-                        if (!erase)
-                        {
-                            switch (type_to_set)
-                            {
-                            case ElementType::Sand:
-                                move_ptr     = &sand_movement;
-                                matter_state = RenderLayer::Solid;
-                                physics_type = Physics::Sand;
-                                break;
-                            case ElementType::Water:
-                                move_ptr     = &liquid_movement;
-                                matter_state = RenderLayer::Liquid;
-                                physics_type = Physics::Water;
-                                break;
-                            case ElementType::Gas:
-                                move_ptr     = &gas_movement;
-                                matter_state = RenderLayer::Gas;
-                                physics_type = Physics::Gas;
-                                break;
-                            case ElementType::Stone:
-                                move_ptr     = &solid_movement;
-                                matter_state = RenderLayer::Solid;
-                                physics_type = Physics::Stone;
-                                break;
-                            case ElementType::Scaffolding:
-                                move_ptr     = &scaffolding_movement;
-                                matter_state = RenderLayer::Solid;
-                                physics_type = Physics::Scaffolding;
-                                break;
-                            case ElementType::Custom:
-                            case ElementType::Bedrock:
-                            default:
-                                break;
-                            }
-                        }
-
-                        Chunk &chunk = world.chunkManager.chunk_at(cx, cy);
                         if (type_to_set == ElementType::Empty)
                         {
                             int offset_x[] = {0, 0, -1, 1};
@@ -93,8 +89,13 @@ int main()
                                 neighbor.physics.canMove_y = true;
                             }
                         }
-                        chunk.set_element_local(
-                            lx, ly, Element(matter_state, type_to_set, 0, move_ptr, physics_type));
+
+                        // Use the factory to spawn the element so colors and physics match
+                        // perfectly
+                        chunk.set_element_local(lx, ly, ElementFactory::create(type_to_set));
+
+                        // Add to our manual changes buffer so the network loop knows to send it
+                        manual_brush_changes.push_back({px, py});
                     }
                 }
             }
@@ -109,7 +110,7 @@ int main()
     std::vector<NetPixelUpdate> packet_batch;
     packet_batch.reserve(MAX_UPDATES_PER_PACKET);
 
-    while (true)
+    while (serverWindow.isOpen())
     {
         auto  currentTime = std::chrono::high_resolution_clock::now();
         float frameTime   = std::chrono::duration<float>(currentTime - lastTime).count();
@@ -120,7 +121,40 @@ int main()
         }
         accumulator += frameTime;
 
-        // 1. Process Network Input & Connections
+        // ---------------------------------------------------------
+        // SFML Window Events & Camera Panning (Server Side)
+        // ---------------------------------------------------------
+        sf::Event sfEvent;
+        while (serverWindow.pollEvent(sfEvent))
+        {
+            if (sfEvent.type == sf::Event::Closed)
+            {
+                serverWindow.close();
+            }
+        }
+
+        float panSpeed = 900.0f * frameTime;
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Right))
+        {
+            camera.move(panSpeed, 0);
+        }
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Left))
+        {
+            camera.move(-panSpeed, 0);
+        }
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Down))
+        {
+            camera.move(0, panSpeed);
+        }
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Up))
+        {
+            camera.move(0, -panSpeed);
+        }
+        serverWindow.setView(camera);
+
+        // ---------------------------------------------------------
+        // Network Input & Connections
+        // ---------------------------------------------------------
         ENetEvent event;
         while (enet_host_service(server, &event, 0) > 0)
         {
@@ -130,7 +164,6 @@ int main()
                 std::vector<NetPixelUpdate> sync_batch;
                 sync_batch.reserve(MAX_UPDATES_PER_PACKET);
 
-                // Iterate through the entire world and send non-empty pixels
                 for (int cy = 0; cy < CHUNK_COUNT_Y; ++cy)
                 {
                     for (int cx = 0; cx < CHUNK_COUNT_X; ++cx)
@@ -148,7 +181,6 @@ int main()
                                     sync_batch.push_back(
                                         {gx, gy, static_cast<uint8_t>(e.type), e.color});
 
-                                    // Send batch strictly to the new connecting peer
                                     if (sync_batch.size() >= MAX_UPDATES_PER_PACKET)
                                     {
                                         ENetPacket *packet = enet_packet_create(
@@ -163,7 +195,6 @@ int main()
                         }
                     }
                 }
-                // Send remainder of the world sync
                 if (!sync_batch.empty())
                 {
                     ENetPacket *packet = enet_packet_create(
@@ -185,23 +216,36 @@ int main()
             }
         }
 
-        // 2. Step Physics
+        // ---------------------------------------------------------
+        // Step Physics & Update Server Visuals
+        // ---------------------------------------------------------
         while (accumulator >= targetDt)
         {
-            world.chunkManager.step(); // Automatically clears and repopulates m_changed_pixels
+            world.chunkManager.step();
             accumulator -= targetDt;
 
-            // 3. Broadcast Changes
-            const std::vector<Point> &changed_points = world.chunkManager.get_changed_pixels();
+            const std::vector<Point> &physics_changes = world.chunkManager.get_changed_pixels();
             packet_batch.clear();
-            for (const Point &p : changed_points)
+
+            // Helper to process both physics points and brush points
+            auto process_point = [&](const Point &p)
             {
                 int cx, cy, lx, ly;
                 if (world.chunkManager.get_chunk_for_global_cell(p.x, p.y, cx, cy, lx, ly))
                 {
                     const Element &e = world.chunkManager.chunk_at(cx, cy).at(lx, ly);
-
                     packet_batch.push_back({p.x, p.y, static_cast<uint8_t>(e.type), e.color});
+
+                    // Update the server's local visual cache instantly
+                    if (p.x >= 0 && p.x < WORLD_SIZE_X && p.y >= 0 && p.y < WORLD_SIZE_Y)
+                    {
+                        int       idx = (p.y * WORLD_SIZE_X + p.x) * 4;
+                        sf::Color newColor(e.color);
+                        worldPixels[idx + 0].color = newColor;
+                        worldPixels[idx + 1].color = newColor;
+                        worldPixels[idx + 2].color = newColor;
+                        worldPixels[idx + 3].color = newColor;
+                    }
 
                     if (packet_batch.size() >= MAX_UPDATES_PER_PACKET)
                     {
@@ -212,9 +256,23 @@ int main()
                         packet_batch.clear();
                     }
                 }
+            };
+
+            // 1. Process physics movements
+            for (const Point &p : physics_changes)
+            {
+                process_point(p);
             }
 
-            // Send remainder
+            // 2. Process manual brush strokes
+            for (const Point &p : manual_brush_changes)
+            {
+                process_point(p);
+            }
+
+            // Clear manual changes until the next mouse click
+            manual_brush_changes.clear();
+
             if (!packet_batch.empty())
             {
                 ENetPacket *packet = enet_packet_create(
@@ -223,7 +281,43 @@ int main()
                 enet_host_broadcast(server, 0, packet);
             }
         }
+
+        // ---------------------------------------------------------
+        // Server Rendering
+        // ---------------------------------------------------------
+        serverWindow.clear(sf::Color::White);
+
+        // 1. Draw the pixels
+        serverWindow.draw(worldPixels);
+
+        // 2. Draw Chunk Activity Boundaries
+        for (int cy = 0; cy < CHUNK_COUNT_Y; ++cy)
+        {
+            for (int cx = 0; cx < CHUNK_COUNT_X; ++cx)
+            {
+                const Chunk &chunk = world.chunkManager.chunk_at(cx, cy);
+
+                int posx   = cx * CHUNK_SIZE_X * CELL_SIZE + 1;
+                int posy   = cy * CHUNK_SIZE_Y * CELL_SIZE + 1;
+                int width  = CHUNK_SIZE_X * CELL_SIZE - 2;
+                int height = CHUNK_SIZE_Y * CELL_SIZE - 2;
+
+                sf::RectangleShape chunkBox(sf::Vector2f(width, height));
+                chunkBox.setPosition(posx, posy);
+                chunkBox.setFillColor(sf::Color::Transparent);
+                chunkBox.setOutlineThickness(1.0f);
+
+                // Red = Inactive/Sleeping (UINT32_MAX), Green = Active
+                chunkBox.setOutlineColor(chunk.active_index == UINT32_MAX ? sf::Color::Red
+                                                                          : sf::Color::Green);
+
+                serverWindow.draw(chunkBox);
+            }
+        }
+
+        serverWindow.display();
     }
+
     enet_host_destroy(server);
     return 0;
 }

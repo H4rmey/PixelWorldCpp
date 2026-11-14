@@ -1,32 +1,21 @@
 #include "network_protocol.h"
 #include "world/helpers/constants.h"
 #include <SFML/Graphics.hpp>
+#include <SFML/Graphics/VertexArray.hpp>
+#include <algorithm>
 #include <enet/enet.h>
+#include <iostream>
 
-int main()
+sf::VertexArray createEmptyVertexArray()
 {
-    enet_initialize();
-    ENetHost   *client = enet_host_create(nullptr, 1, 2, 0, 0);
-    ENetAddress address;
-    enet_address_set_host(&address, "127.0.0.1");
-    address.port   = 1234;
-    ENetPeer *peer = enet_host_connect(client, &address, 2, 0);
-
-    const int total_width  = CHUNK_COUNT_X * CHUNK_SIZE_X;
-    const int total_height = CHUNK_COUNT_Y * CHUNK_SIZE_Y;
-
-    sf::RenderWindow window(sf::VideoMode(WINDOW_SIZE_X, WINDOW_SIZE_Y), "World Simulation Client");
-    window.setFramerateLimit(MAX_FRAMERATE);
-
-    sf::View camera = window.getDefaultView();
-
     // Preallocate a quad (4 vertices) for every single pixel in the world.
-    sf::VertexArray worldPixels(sf::Quads, total_width * total_height * 4);
-    for (int y = 0; y < total_height; ++y)
+    sf::VertexArray worldPixels(sf::Quads, WORLD_SIZE_X * WORLD_SIZE_Y * 4);
+
+    for (int y = 0; y < WORLD_SIZE_Y; ++y)
     {
-        for (int x = 0; x < total_width; ++x)
+        for (int x = 0; x < WORLD_SIZE_X; ++x)
         {
-            int   idx = (y * total_width + x) * 4;
+            int   idx = (y * WORLD_SIZE_X + x) * 4;
             float fx  = x * CELL_SIZE;
             float fy  = y * CELL_SIZE;
 
@@ -35,14 +24,38 @@ int main()
             worldPixels[idx + 2].position = sf::Vector2f(fx + CELL_SIZE, fy + CELL_SIZE);
             worldPixels[idx + 3].position = sf::Vector2f(fx, fy + CELL_SIZE);
 
-            // Default color matching your Empty element (0x00000000)
-            sf::Color defaultColor(0x00000000);
+            // Default color matching your Empty element (0x828282FF)
+            sf::Color defaultColor(0x828282FF);
             worldPixels[idx + 0].color = defaultColor;
             worldPixels[idx + 1].color = defaultColor;
             worldPixels[idx + 2].color = defaultColor;
             worldPixels[idx + 3].color = defaultColor;
         }
     }
+    return worldPixels;
+}
+
+int main()
+{
+    if (enet_initialize() != 0)
+    {
+        std::cerr << "An error occurred while initializing ENet.\n";
+        return EXIT_FAILURE;
+    }
+    atexit(enet_deinitialize);
+
+    ENetHost   *client = enet_host_create(nullptr, 1, 2, 0, 0);
+    ENetAddress address;
+    enet_address_set_host(&address, "127.0.0.1");
+    address.port   = 1234;
+    ENetPeer *peer = enet_host_connect(client, &address, 2, 0);
+
+    sf::RenderWindow window(sf::VideoMode(WINDOW_SIZE_X, WINDOW_SIZE_Y), "World Simulation Client");
+    window.setFramerateLimit(MAX_FRAMERATE);
+
+    sf::VertexArray worldPixels = createEmptyVertexArray();
+
+    sf::View camera = window.getDefaultView();
 
     int     brush_size = BRUSH_SIZE;
     uint8_t brush_type = 1; // 1 = Sand
@@ -63,12 +76,14 @@ int main()
                 if (event.key.code == sf::Keyboard::Num1)
                 {
                     brush_type = 1; // Sand
+                    printf("Set brush to Sand\n");
                 }
                 if (event.key.code == sf::Keyboard::Num2)
                 {
                     brush_type = 2; // Water
+                    printf("Set brush to Water\n");
                 }
-                // ... map 3 through 8
+                // ... map 3 through 8 as needed
 
                 if (event.key.code == sf::Keyboard::Add || event.key.code == sf::Keyboard::Equal)
                 {
@@ -137,10 +152,10 @@ int main()
                 {
                     NetPixelUpdate &u = updates[i];
 
-                    if (u.global_x >= 0 && u.global_x < total_width && u.global_y >= 0 &&
-                        u.global_y < total_height)
+                    if (u.global_x >= 0 && u.global_x < WORLD_SIZE_X && u.global_y >= 0 &&
+                        u.global_y < WORLD_SIZE_Y)
                     {
-                        int idx = (u.global_y * total_width + u.global_x) * 4;
+                        int idx = (u.global_y * WORLD_SIZE_X + u.global_x) * 4;
 
                         sf::Color newColor(u.color);
 
@@ -155,7 +170,8 @@ int main()
         }
 
         // Rendering
-        window.clear(sf::Color::White);
+        sf::Color defaultColor(0x828282FF);
+        window.clear(defaultColor);
 
         // Draw the massive world
         window.draw(worldPixels);
