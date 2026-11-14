@@ -29,11 +29,20 @@ class ElementFactory
                        Physics::Empty);
     }
 
-    static Element create_sand()
+    static Element create_sand_static()
     {
         Physics p   = Physics::Sand;
         p.canMove_x = false;
         p.canMove_y = false;
+        // 0xC2B280FF = Sand/Tan
+        return Element(RenderLayer::Solid, ElementType::Sand, 0xC2B280FF, &sand_movement, p);
+    }
+
+    static Element create_sand()
+    {
+        Physics p   = Physics::Sand;
+        p.canMove_x = true;
+        p.canMove_y = true;
         // 0xC2B280FF = Sand/Tan
         return Element(RenderLayer::Solid, ElementType::Sand, 0xC2B280FF, &sand_movement, p);
     }

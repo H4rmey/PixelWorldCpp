@@ -14,8 +14,8 @@ SHARED_SRCS = world/chunk.cpp world/chunkManager.cpp
 SHARED_OBJS = $(SHARED_SRCS:.cpp=.o)
 
 # App-specific sources
-SERVER_SRCS = cmd/server/main.cpp
-CLIENT_SRCS = cmd/client/main.cpp
+SERVER_SRCS = cmd/server/main.cpp networking/server.cpp
+CLIENT_SRCS = cmd/client/main.cpp networking/client.cpp
 
 # Convert .cpp filenames to .o filenames
 SERVER_OBJS = $(SERVER_SRCS:.cpp=.o)

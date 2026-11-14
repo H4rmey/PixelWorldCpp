@@ -13,7 +13,7 @@ static constexpr int CHUNK_SIZE_Y = 32;
 static constexpr int MAX_FRAMERATE = 60;
 static constexpr int GRAVITY       = 32;
 static constexpr int CELL_SIZE     = 2;
-static constexpr int BRUSH_SIZE    = 1;
+static constexpr int BRUSH_SIZE    = 2;
 
 static constexpr std::size_t WORLD_SIZE_X = WINDOW_SIZE_X / CELL_SIZE;
 static constexpr std::size_t WORLD_SIZE_Y = WINDOW_SIZE_Y / CELL_SIZE;

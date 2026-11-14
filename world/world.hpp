@@ -34,7 +34,7 @@ class World
             }
             else
             {
-                element = ElementFactory::create_sand();
+                element = ElementFactory::create_sand_static();
             }
             chunkManager.set_element_global(coord.x, coord.y, element);
         }
