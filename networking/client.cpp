@@ -1,5 +1,8 @@
 #include "client.hpp"
 #include "../world/helpers/constants.h"
+#include "networking/protocol.hpp"
+#include <cstdio>
+#include <enet/enet.h>
 #include <iostream>
 
 Client::~Client() { stop(); }
@@ -131,6 +134,24 @@ void Client::on_packet_receive(ENetEvent &event, sf::VertexArray &worldPixels)
 
     // Always clean up the packet when done!
     enet_packet_destroy(event.packet);
+}
+
+void Client::send_client_position(int gx, int gy)
+{
+    if (!m_peer)
+    {
+        return;
+    }
+
+    ClientPositionPacket input;
+    input.packet_id     = PACKET_MOUSE_POSITION;
+    input.mouse_world_x = static_cast<int32_t>(gx);
+    input.mouse_world_y = static_cast<int32_t>(gy);
+
+    // Send on our dedicated input channel
+    ENetPacket *packet = enet_packet_create(&input, sizeof(ClientPositionPacket),
+                                            ENET_PACKET_FLAG_UNRELIABLE_FRAGMENT);
+    enet_peer_send(m_peer, CHANNEL_MOUSE_POSITION, packet);
 }
 
 void Client::send_brush_click(int gx, int gy, int brush_size, uint8_t element_type, bool erase)

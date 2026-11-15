@@ -11,6 +11,7 @@ class Server
     ENetHost                   *m_host = nullptr;
     std::vector<NetPixelUpdate> m_packet_batch;
     const size_t                MAX_UPDATES_PER_PACKET = 175;
+    std::vector<Chunk>          chunks_to_send;
 
     // Internal event handlers
     void on_client_connect(ENetEvent &event, World &world);
@@ -36,5 +37,8 @@ class Server
                              const std::vector<Point> &manual_brush_changes, World &world);
 
     // Sends the full non-empty world state to a specific peer
-    void send_chunk_data(ENetPeer *peer, World &world);
+    void send_chunk_data_all(ENetPeer *peer, World &world);
+    void send_chunk_data_single(ENetPeer *peer, Chunk &chunk, World &world);
+    void send_chunk_data_multiple(ENetPeer *peer, Chunk &chunk,
+                                  std::vector<NetPixelUpdate> &sync_batch);
 };

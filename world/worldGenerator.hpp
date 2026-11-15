@@ -20,7 +20,7 @@ class WorldGenerator
         int   width           = WORLD_SIZE_X;
         int   height          = WORLD_SIZE_Y;
         int   seed            = 123456789;
-        float surfaceRatio    = 0.2f;
+        float surfaceRatio    = 0.3f;
         float blockSize       = 2.0f;
         int   caIterations    = 1;
         bool  enablePitfalls  = true;

@@ -115,7 +115,11 @@ int main()
             const std::vector<Point> &physics_changes = world.chunkManager.get_changed_pixels();
 
             // Delegate packet batching and sending to the networking layer
-            server.send_changed_pixels(physics_changes, manual_brush_changes, world);
+            // server.send_changed_pixels(physics_changes, manual_brush_changes, world);
+            // for (Chunk *chunk : world.chunkManager.get_active_chunks())
+            //{
+            //     server.send_chunk_data(*chunk, world);
+            // }
 
             // Update Server's local debug window
             auto update_local_cache = [&](const std::vector<Point> &points)

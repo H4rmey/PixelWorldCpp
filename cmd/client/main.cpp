@@ -140,15 +140,21 @@ int main()
         }
         window.setView(camera);
 
+        // send the current mouse position to the server
+        //  server will then send the chunkdata of the relevant chunk back to the client
+        sf::Vector2i mouseScreen = sf::Mouse::getPosition(window);
+        sf::Vector2f mouseWorld  = window.mapPixelToCoords(mouseScreen);
+
+        int gx = static_cast<int>(mouseWorld.x) / CELL_SIZE;
+        int gy = static_cast<int>(mouseWorld.y) / CELL_SIZE;
+
+        client.send_client_position(gx, gy);
+
         // --- NETWORK: Send Input ---
         if (sf::Mouse::isButtonPressed(sf::Mouse::Left) ||
             sf::Mouse::isButtonPressed(sf::Mouse::Right))
         {
-            sf::Vector2i mouseScreen = sf::Mouse::getPosition(window);
-            sf::Vector2f mouseWorld  = window.mapPixelToCoords(mouseScreen);
 
-            int  gx    = static_cast<int>(mouseWorld.x) / CELL_SIZE;
-            int  gy    = static_cast<int>(mouseWorld.y) / CELL_SIZE;
             bool erase = sf::Mouse::isButtonPressed(sf::Mouse::Right);
 
             // Delegate packet creation to the client tool

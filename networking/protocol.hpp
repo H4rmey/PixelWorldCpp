@@ -4,10 +4,11 @@
 // ENet Channel definitions
 enum NetworkChannel : uint8_t
 {
-    CHANNEL_INPUT         = 0, // Client -> Server brush clicks
-    CHANNEL_PIXEL_UPDATES = 1, // Server -> Client incremental pixel changes
-    CHANNEL_WORLD_SYNC    = 2, // Server -> Client massive initial chunk data
-    CHANNEL_COUNT         = 3
+    CHANNEL_INPUT          = 0, // Client -> Server brush clicks
+    CHANNEL_PIXEL_UPDATES  = 1, // Server -> Client incremental pixel changes
+    CHANNEL_WORLD_SYNC     = 2, // Server -> Client massive initial chunk data
+    CHANNEL_MOUSE_POSITION = 3,
+    CHANNEL_COUNT          = 4
 };
 
 #pragma pack(push, 1)
@@ -15,8 +16,17 @@ enum NetworkChannel : uint8_t
 // Packet IDs
 enum PacketID : uint8_t
 {
-    PACKET_BRUSH_INPUT = 0,
-    PACKET_PIXEL_BATCH = 1
+    PACKET_BRUSH_INPUT    = 0,
+    PACKET_PIXEL_BATCH    = 1,
+    PACKET_MOUSE_POSITION = 2
+};
+
+// Client -> Server
+struct ClientPositionPacket
+{
+    uint8_t packet_id;
+    int32_t mouse_world_x;
+    int32_t mouse_world_y;
 };
 
 // Client -> Server

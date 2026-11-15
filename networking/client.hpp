@@ -25,4 +25,6 @@ class Client
 
     // Sends the brush input to the server
     void send_brush_click(int gx, int gy, int brush_size, uint8_t element_type, bool erase);
+
+    void send_client_position(int gx, int gy);
 };

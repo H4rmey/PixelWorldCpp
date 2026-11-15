@@ -1,5 +1,8 @@
 #include "server.hpp"
+#include "networking/protocol.hpp"
 #include "world/elementFactory.hpp"
+#include <cstdio>
+#include <enet/enet.h>
 #include <iostream>
 
 Server::~Server() { stop(); }
@@ -56,7 +59,7 @@ void Server::poll_events(World &world, std::vector<Point> &manual_brush_changes)
 void Server::on_client_connect(ENetEvent &event, World &world)
 {
     std::cout << "Client connected from " << event.peer->address.host << "\n";
-    send_chunk_data(event.peer, world);
+    send_chunk_data_all(event.peer, world);
 }
 
 void Server::on_client_disconnect(ENetEvent &event)
@@ -74,6 +77,35 @@ void Server::on_client_event(ENetEvent &event, World &world,
     {
         ClientInputPacket *input = reinterpret_cast<ClientInputPacket *>(event.packet->data);
         apply_brush_to_world(input, world, manual_brush_changes);
+    }
+    if (packet_id == PACKET_MOUSE_POSITION)
+    {
+        ClientPositionPacket *input = reinterpret_cast<ClientPositionPacket *>(event.packet->data);
+
+        int cx = input->mouse_world_x / CHUNK_SIZE_X;
+        int cy = input->mouse_world_y / CHUNK_SIZE_Y;
+
+        // Create the batch once for the entire grid
+        std::vector<NetPixelUpdate> sync_batch;
+        sync_batch.reserve(MAX_UPDATES_PER_PACKET);
+
+        for (int y = cy - 1; y <= cy + 1; ++y)
+        {
+            for (int x = cx - 1; x <= cx + 1; ++x)
+            {
+                Chunk &chunk = world.chunkManager.chunk_at(x, y);
+                send_chunk_data_multiple(event.peer, chunk, sync_batch);
+            }
+        }
+
+        // Flush whatever is left over after all 9 chunks are processed
+        if (!sync_batch.empty())
+        {
+            ENetPacket *packet =
+                enet_packet_create(sync_batch.data(), sync_batch.size() * sizeof(NetPixelUpdate),
+                                   ENET_PACKET_FLAG_RELIABLE);
+            enet_peer_send(event.peer, CHANNEL_WORLD_SYNC, packet);
+        }
     }
 
     enet_packet_destroy(event.packet);
@@ -122,7 +154,72 @@ void Server::apply_brush_to_world(ClientInputPacket *input, World &world,
     }
 }
 
-void Server::send_chunk_data(ENetPeer *peer, World &world)
+void Server::send_chunk_data_multiple(ENetPeer *peer, Chunk &chunk,
+                                      std::vector<NetPixelUpdate> &sync_batch)
+{
+    for (int ly = 0; ly < CHUNK_SIZE_Y; ++ly)
+    {
+        for (int lx = 0; lx < CHUNK_SIZE_X; ++lx)
+        {
+            const Element &e = chunk.at(lx, ly);
+
+            int gx = chunk.get_world_pos_x() * CHUNK_SIZE_X + lx;
+            int gy = chunk.get_world_pos_y() * CHUNK_SIZE_Y + ly;
+
+            sync_batch.push_back({gx, gy, static_cast<uint8_t>(e.type), e.color});
+
+            // Send when full, then clear
+            if (sync_batch.size() >= MAX_UPDATES_PER_PACKET)
+            {
+                ENetPacket *packet = enet_packet_create(sync_batch.data(),
+                                                        sync_batch.size() * sizeof(NetPixelUpdate),
+                                                        ENET_PACKET_FLAG_RELIABLE);
+                enet_peer_send(peer, CHANNEL_WORLD_SYNC, packet);
+                sync_batch.clear();
+            }
+        }
+    }
+    // REMOVED: Do not flush the remaining pixels here!
+    // Let them accumulate for the next chunk in the 3x3 grid.
+}
+
+void Server::send_chunk_data_single(ENetPeer *peer, Chunk &chunk, World &world)
+{
+    std::vector<NetPixelUpdate> sync_batch;
+    sync_batch.reserve(MAX_UPDATES_PER_PACKET);
+
+    for (int ly = 0; ly < CHUNK_SIZE_Y; ++ly)
+    {
+        for (int lx = 0; lx < CHUNK_SIZE_X; ++lx)
+        {
+            const Element &e = chunk.at(lx, ly);
+
+            int gx = chunk.get_world_pos_x() * CHUNK_SIZE_X + lx;
+            int gy = chunk.get_world_pos_y() * CHUNK_SIZE_Y + ly;
+
+            sync_batch.push_back({gx, gy, static_cast<uint8_t>(e.type), e.color});
+
+            if (sync_batch.size() >= MAX_UPDATES_PER_PACKET)
+            {
+                ENetPacket *packet = enet_packet_create(sync_batch.data(),
+                                                        sync_batch.size() * sizeof(NetPixelUpdate),
+                                                        ENET_PACKET_FLAG_RELIABLE);
+                enet_peer_send(peer, CHANNEL_WORLD_SYNC, packet);
+                sync_batch.clear();
+            }
+        }
+    }
+
+    if (!sync_batch.empty())
+    {
+        ENetPacket *packet =
+            enet_packet_create(sync_batch.data(), sync_batch.size() * sizeof(NetPixelUpdate),
+                               ENET_PACKET_FLAG_RELIABLE);
+        enet_peer_send(peer, CHANNEL_WORLD_SYNC, packet);
+    }
+}
+
+void Server::send_chunk_data_all(ENetPeer *peer, World &world)
 {
     std::vector<NetPixelUpdate> sync_batch;
     sync_batch.reserve(MAX_UPDATES_PER_PACKET);
