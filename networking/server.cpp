@@ -1,7 +1,7 @@
 #include "server.hpp"
 #include "networking/protocol.hpp"
 #include "world/elementFactory.hpp"
-#include <cstdio>
+#include <cstdlib>
 #include <enet/enet.h>
 #include <iostream>
 
@@ -13,7 +13,7 @@ bool Server::start(uint16_t port)
     address.host = ENET_HOST_ANY;
     address.port = port;
 
-    // Max 32 clients, 3 channels (0, 1, 2)
+    // Max 32 clients, CHANNEL_COUNT channels
     m_host = enet_host_create(&address, 32, CHANNEL_COUNT, 0, 0);
     if (!m_host)
     {
@@ -32,6 +32,7 @@ void Server::stop()
         enet_host_destroy(m_host);
         m_host = nullptr;
     }
+    m_client_states.clear();
 }
 
 void Server::poll_events(World &world, std::vector<Point> &manual_brush_changes)
@@ -65,27 +66,36 @@ void Server::on_client_connect(ENetEvent &event, World &world)
 void Server::on_client_disconnect(ENetEvent &event)
 {
     std::cout << "Client disconnected.\n";
+    m_client_states.erase(event.peer);
     event.peer->data = nullptr;
 }
 
 void Server::on_client_event(ENetEvent &event, World &world,
                              std::vector<Point> &manual_brush_changes)
 {
+    if (event.packet->dataLength < 1)
+    {
+        enet_packet_destroy(event.packet);
+        return;
+    }
+
     uint8_t packet_id = event.packet->data[0];
 
-    if (packet_id == PACKET_BRUSH_INPUT)
+    if (packet_id == PACKET_BRUSH_INPUT && event.packet->dataLength >= sizeof(ClientInputPacket))
     {
         ClientInputPacket *input = reinterpret_cast<ClientInputPacket *>(event.packet->data);
         apply_brush_to_world(input, world, manual_brush_changes);
     }
-    if (packet_id == PACKET_MOUSE_POSITION)
+    else if (packet_id == PACKET_MOUSE_POSITION &&
+             event.packet->dataLength >= sizeof(ClientPositionPacket))
     {
         ClientPositionPacket *input = reinterpret_cast<ClientPositionPacket *>(event.packet->data);
 
         int cx = input->mouse_world_x / CHUNK_SIZE_X;
         int cy = input->mouse_world_y / CHUNK_SIZE_Y;
 
-        // Create the batch once for the entire grid
+        ClientSyncState &state = m_client_states[event.peer];
+
         std::vector<NetPixelUpdate> sync_batch;
         sync_batch.reserve(MAX_UPDATES_PER_PACKET);
 
@@ -93,19 +103,33 @@ void Server::on_client_event(ENetEvent &event, World &world,
         {
             for (int x = cx - 1; x <= cx + 1; ++x)
             {
+                if (x < 0 || x >= CHUNK_COUNT_X || y < 0 || y >= CHUNK_COUNT_Y)
+                {
+                    continue;
+                }
+
                 Chunk &chunk = world.chunkManager.chunk_at(x, y);
-                send_chunk_data_multiple(event.peer, chunk, sync_batch);
+
+                bool was_in_prev_grid =
+                    (std::abs(x - state.last_cx) <= 1) && (std::abs(y - state.last_cy) <= 1);
+
+                if (was_in_prev_grid)
+                {
+                    send_chunk_data_dirtyrect(event.peer, chunk, sync_batch);
+                }
+                else
+                {
+                    // Newly entered chunk: send all pixels (including Empty so any
+                    // stale pixels from an earlier visit get overwritten cleanly)
+                    send_chunk_data_multiple(event.peer, chunk, sync_batch);
+                }
             }
         }
 
-        // Flush whatever is left over after all 9 chunks are processed
-        if (!sync_batch.empty())
-        {
-            ENetPacket *packet =
-                enet_packet_create(sync_batch.data(), sync_batch.size() * sizeof(NetPixelUpdate),
-                                   ENET_PACKET_FLAG_RELIABLE);
-            enet_peer_send(event.peer, CHANNEL_WORLD_SYNC, packet);
-        }
+        flush_sync_batch(event.peer, sync_batch);
+
+        state.last_cx = cx;
+        state.last_cy = cy;
     }
 
     enet_packet_destroy(event.packet);
@@ -168,29 +192,31 @@ void Server::send_chunk_data_multiple(ENetPeer *peer, Chunk &chunk,
 
             sync_batch.push_back({gx, gy, static_cast<uint8_t>(e.type), e.color});
 
-            // Send when full, then clear
             if (sync_batch.size() >= MAX_UPDATES_PER_PACKET)
             {
-                ENetPacket *packet = enet_packet_create(sync_batch.data(),
-                                                        sync_batch.size() * sizeof(NetPixelUpdate),
-                                                        ENET_PACKET_FLAG_RELIABLE);
-                enet_peer_send(peer, CHANNEL_WORLD_SYNC, packet);
-                sync_batch.clear();
+                flush_sync_batch(peer, sync_batch);
             }
         }
     }
-    // REMOVED: Do not flush the remaining pixels here!
-    // Let them accumulate for the next chunk in the 3x3 grid.
 }
 
-void Server::send_chunk_data_single(ENetPeer *peer, Chunk &chunk, World &world)
+void Server::send_chunk_data_single(ENetPeer *peer, Chunk &chunk)
 {
     std::vector<NetPixelUpdate> sync_batch;
     sync_batch.reserve(MAX_UPDATES_PER_PACKET);
 
-    for (int ly = 0; ly < CHUNK_SIZE_Y; ++ly)
+    send_chunk_data_multiple(peer, chunk, sync_batch);
+    flush_sync_batch(peer, sync_batch);
+}
+
+void Server::send_chunk_data_dirtyrect(ENetPeer *peer, Chunk &chunk,
+                                       std::vector<NetPixelUpdate> &sync_batch)
+{
+    Rect rect = chunk.get_dirty_rect_local();
+
+    for (int ly = rect.min_y; ly <= rect.max_y; ++ly)
     {
-        for (int lx = 0; lx < CHUNK_SIZE_X; ++lx)
+        for (int lx = rect.min_x; lx <= rect.max_x; ++lx)
         {
             const Element &e = chunk.at(lx, ly);
 
@@ -201,21 +227,9 @@ void Server::send_chunk_data_single(ENetPeer *peer, Chunk &chunk, World &world)
 
             if (sync_batch.size() >= MAX_UPDATES_PER_PACKET)
             {
-                ENetPacket *packet = enet_packet_create(sync_batch.data(),
-                                                        sync_batch.size() * sizeof(NetPixelUpdate),
-                                                        ENET_PACKET_FLAG_RELIABLE);
-                enet_peer_send(peer, CHANNEL_WORLD_SYNC, packet);
-                sync_batch.clear();
+                flush_sync_batch(peer, sync_batch);
             }
         }
-    }
-
-    if (!sync_batch.empty())
-    {
-        ENetPacket *packet =
-            enet_packet_create(sync_batch.data(), sync_batch.size() * sizeof(NetPixelUpdate),
-                               ENET_PACKET_FLAG_RELIABLE);
-        enet_peer_send(peer, CHANNEL_WORLD_SYNC, packet);
     }
 }
 
@@ -243,11 +257,7 @@ void Server::send_chunk_data_all(ENetPeer *peer, World &world)
 
                         if (sync_batch.size() >= MAX_UPDATES_PER_PACKET)
                         {
-                            ENetPacket *packet = enet_packet_create(
-                                sync_batch.data(), sync_batch.size() * sizeof(NetPixelUpdate),
-                                ENET_PACKET_FLAG_RELIABLE);
-                            enet_peer_send(peer, CHANNEL_WORLD_SYNC, packet);
-                            sync_batch.clear();
+                            flush_sync_batch(peer, sync_batch);
                         }
                     }
                 }
@@ -255,13 +265,7 @@ void Server::send_chunk_data_all(ENetPeer *peer, World &world)
         }
     }
 
-    if (!sync_batch.empty())
-    {
-        ENetPacket *packet =
-            enet_packet_create(sync_batch.data(), sync_batch.size() * sizeof(NetPixelUpdate),
-                               ENET_PACKET_FLAG_RELIABLE);
-        enet_peer_send(peer, CHANNEL_WORLD_SYNC, packet);
-    }
+    flush_sync_batch(peer, sync_batch);
 }
 
 void Server::send_changed_pixels(const std::vector<Point> &physics_changes,
@@ -280,11 +284,7 @@ void Server::send_changed_pixels(const std::vector<Point> &physics_changes,
 
             if (m_packet_batch.size() >= MAX_UPDATES_PER_PACKET)
             {
-                ENetPacket *packet = enet_packet_create(
-                    m_packet_batch.data(), m_packet_batch.size() * sizeof(NetPixelUpdate),
-                    ENET_PACKET_FLAG_RELIABLE);
-                enet_host_broadcast(m_host, CHANNEL_PIXEL_UPDATES, packet);
-                m_packet_batch.clear();
+                flush_broadcast_batch();
             }
         }
     };
@@ -298,11 +298,34 @@ void Server::send_changed_pixels(const std::vector<Point> &physics_changes,
         process_point(p);
     }
 
-    if (!m_packet_batch.empty())
+    flush_broadcast_batch();
+}
+
+void Server::flush_sync_batch(ENetPeer *peer, std::vector<NetPixelUpdate> &sync_batch)
+{
+    if (sync_batch.empty())
     {
-        ENetPacket *packet = enet_packet_create(m_packet_batch.data(),
-                                                m_packet_batch.size() * sizeof(NetPixelUpdate),
-                                                ENET_PACKET_FLAG_RELIABLE);
-        enet_host_broadcast(m_host, CHANNEL_PIXEL_UPDATES, packet);
+        return;
     }
+
+    ENetPacket *packet = enet_packet_create(
+        sync_batch.data(), sync_batch.size() * sizeof(NetPixelUpdate), ENET_PACKET_FLAG_RELIABLE);
+
+    enet_peer_send(peer, CHANNEL_WORLD_SYNC, packet);
+    sync_batch.clear();
+}
+
+void Server::flush_broadcast_batch()
+{
+    if (m_packet_batch.empty())
+    {
+        return;
+    }
+
+    ENetPacket *packet =
+        enet_packet_create(m_packet_batch.data(), m_packet_batch.size() * sizeof(NetPixelUpdate),
+                           ENET_PACKET_FLAG_RELIABLE);
+
+    enet_host_broadcast(m_host, CHANNEL_PIXEL_UPDATES, packet);
+    m_packet_batch.clear();
 }
