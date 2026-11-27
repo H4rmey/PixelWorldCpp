@@ -152,7 +152,7 @@ int main()
         serverWindow.clear(sf::Color::White);
         serverWindow.draw(worldPixels);
 
-        // Draw Chunk Boundaries
+        // Draw Chunk Boundaries & Dirty Rects
         for (int cy = 0; cy < CHUNK_COUNT_Y; ++cy)
         {
             for (int cx = 0; cx < CHUNK_COUNT_X; ++cx)
@@ -167,6 +167,23 @@ int main()
                 chunkBox.setOutlineColor(chunk.active_index == UINT32_MAX ? sf::Color::Red
                                                                           : sf::Color::Green);
                 serverWindow.draw(chunkBox);
+
+                // Draw Dirty Rect (only if chunk is active and rect is valid)
+                Rect dirty_rect = chunk.get_dirty_rect_local();
+                if (chunk.active_index != UINT32_MAX && dirty_rect.min_x <= dirty_rect.max_x &&
+                    dirty_rect.min_y <= dirty_rect.max_y)
+                {
+                    float width  = (dirty_rect.max_x - dirty_rect.min_x + 1) * CELL_SIZE;
+                    float height = (dirty_rect.max_y - dirty_rect.min_y + 1) * CELL_SIZE;
+
+                    sf::RectangleShape dirtyBox(sf::Vector2f(width, height));
+                    dirtyBox.setPosition((cx * CHUNK_SIZE_X + dirty_rect.min_x) * CELL_SIZE,
+                                         (cy * CHUNK_SIZE_Y + dirty_rect.min_y) * CELL_SIZE);
+                    dirtyBox.setFillColor(sf::Color::Transparent);
+                    dirtyBox.setOutlineThickness(1.0f);
+                    dirtyBox.setOutlineColor(sf::Color(160, 32, 240)); // Purple
+                    serverWindow.draw(dirtyBox);
+                }
             }
         }
 

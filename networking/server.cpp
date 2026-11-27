@@ -214,9 +214,9 @@ void Server::send_chunk_data_dirtyrect(ENetPeer *peer, Chunk &chunk,
 {
     Rect rect = chunk.get_dirty_rect_local();
 
-    for (int ly = rect.min_y; ly <= rect.max_y; ++ly)
+    for (int ly = rect.min_y - 1; ly <= rect.max_y + 1; ++ly)
     {
-        for (int lx = rect.min_x; lx <= rect.max_x; ++lx)
+        for (int lx = rect.min_x - 1; lx <= rect.max_x + 1; ++lx)
         {
             const Element &e = chunk.at(lx, ly);
 
